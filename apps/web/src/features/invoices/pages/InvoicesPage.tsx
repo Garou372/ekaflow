@@ -16,11 +16,11 @@ import useClients from "../../../hooks/useClients";
 
 import type {
   Invoice,
-  InvoiceFormValues,
-  InvoiceStatus,
   InvoiceWithRelations,
   CreateInvoiceInput,
+  InvoiceStatus,
 } from "../types/invoice";
+import type { InvoiceFormValues } from "../validation/invoice.schema";
 
 import { INVOICE_STATUSES } from "../types/invoice";
 
@@ -102,6 +102,7 @@ export default function InvoicesPage() {
     updateStatus,
     creating,
     updating,
+    deleting,
   } = useInvoices();
 
   const { createRecurringInvoice } = useRecurringInvoices();
@@ -112,6 +113,21 @@ export default function InvoicesPage() {
   const [activeTab, setActiveTab] = useState<"all" | "recurring">("all");
   const [editingInvoice, setEditingInvoice] = useState<Invoice | undefined>();
   const [viewingInvoiceId, setViewingInvoiceId] = useState<string | null>(null);
+
+  // ── Enrich invoices with clientName + calculated totals ───────────────────
+  const enriched = useMemo((): InvoiceWithRelations[] => {
+    return invoices.map((invoice) => ({
+      ...invoice,
+      clientName:
+        clients.find((c) => c.id === invoice.clientId)?.name ??
+        "Unknown Client",
+      totals: calculateInvoice(
+        invoice.lineItems,
+        invoice.discountRate,
+        invoice.taxRate,
+      ),
+    }));
+  }, [invoices, clients]);
 
   const viewingInvoice = useMemo(() => {
     return enriched.find((i) => i.id === viewingInvoiceId);
@@ -135,21 +151,6 @@ export default function InvoicesPage() {
     () => getNextInvoiceNumber(invoices[0]?.invoiceNumber),
     [invoices],
   );
-
-  // ── Enrich invoices with clientName + calculated totals ───────────────────
-  const enriched = useMemo((): InvoiceWithRelations[] => {
-    return invoices.map((invoice) => ({
-      ...invoice,
-      clientName:
-        clients.find((c) => c.id === invoice.clientId)?.name ??
-        "Unknown Client",
-      totals: calculateInvoice(
-        invoice.lineItems,
-        invoice.discountRate,
-        invoice.taxRate,
-      ),
-    }));
-  }, [invoices, clients]);
 
   // ── Auto-detect overdue invoices that are still marked "sent" ────────────
   const overdueUnmarked = useMemo(() => {
@@ -175,7 +176,7 @@ export default function InvoicesPage() {
       if (recurring) {
         await createRecurringInvoice({
           client_id: data.clientId,
-          project_id: data.projectId,
+          project_id: data.projectId ?? null,
           frequency: recurring.frequency,
           next_run_date: new Date().toISOString().split("T")[0],
           status: "active",
@@ -294,7 +295,15 @@ export default function InvoicesPage() {
         </button>
       </PageHeader>
 
-      {/* ── Overdue Banner ─────────────────────────────────────────────── */}
+      {isLoading ? (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mt-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="h-48 rounded-xl bg-gray-100 animate-pulse border" />
+          ))}
+        </div>
+      ) : (
+        <>
+          {/* ── Overdue Banner ─────────────────────────────────────────────── */}
       {overdueUnmarked.length > 0 && (
         <div
           role="alert"
@@ -517,6 +526,9 @@ export default function InvoicesPage() {
           onClose={() => setRecordingPaymentFor(undefined)}
           onSubmit={handlePaymentSubmit}
         />
+      )}
+
+        </>
       )}
 
       {/* ── Delete confirmation modal ──────────────────────────────────── */}

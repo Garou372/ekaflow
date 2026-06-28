@@ -1,7 +1,5 @@
 import { supabase } from "../lib/supabase";
 import type { PortalToken, CreatePortalTokenPayload } from "../features/portal/types/portal";
-import type { Proposal } from "./proposal.service";
-import type { Invoice } from "../features/invoices/types/invoice";
 import type { Client } from "./client.service";
 import { createNotification } from "./notification.service";
 
@@ -89,5 +87,18 @@ export async function acceptPortalProposal(tokenString: string) {
     link_url: `/proposals`, // Or deep link to proposal
   });
 
+  return true;
+}
+
+export async function revokePortalToken(tokenString: string) {
+  const token = await validatePortalToken(tokenString);
+  if (!token) throw new Error("Invalid token");
+
+  const { error } = await supabase
+    .from("portal_tokens")
+    .update({ is_revoked: true })
+    .eq("id", token.id);
+
+  if (error) throw error;
   return true;
 }

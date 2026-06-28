@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabase";
+import { auditService } from "./audit.service";
 
 import type {
   CreateInvoiceInput,
@@ -9,6 +10,7 @@ type InvoiceRow = {
   id: string;
   user_id: string;
   client_id: string;
+  project_id: string | null;
   proposal_id: string | null;
 
   invoice_number: string;
@@ -45,7 +47,7 @@ function mapInvoice(row: InvoiceRow): Invoice {
     userId: row.user_id,
 
     clientId: row.client_id,
-
+    projectId: row.project_id,
     proposalId: row.proposal_id,
 
     invoiceNumber: row.invoice_number,
@@ -119,7 +121,7 @@ export async function createInvoice(payload: CreateInvoiceInput) {
     .from("invoices")
     .insert({
       client_id: payload.clientId,
-
+      project_id: payload.projectId ?? null,
       proposal_id: payload.proposalId ?? null,
 
       invoice_number: payload.invoiceNumber,
@@ -145,6 +147,15 @@ export async function createInvoice(payload: CreateInvoiceInput) {
     .select()
     .single();
 
+  if (!error && data) {
+    await auditService.log({
+      action: "invoice.created",
+      entity_type: "invoice",
+      entity_id: data.id,
+      metadata: { invoiceNumber: payload.invoiceNumber },
+    });
+  }
+
   return {
     data: data ? mapInvoice(data as InvoiceRow) : null,
     error,
@@ -158,9 +169,8 @@ export async function updateInvoice(
   const dbPayload: Record<string, unknown> = {};
 
   if (payload.clientId !== undefined) dbPayload.client_id = payload.clientId;
-
-  if (payload.proposalId !== undefined)
-    dbPayload.proposal_id = payload.proposalId;
+  if (payload.projectId !== undefined) dbPayload.project_id = payload.projectId;
+  if (payload.proposalId !== undefined) dbPayload.proposal_id = payload.proposalId;
 
   if (payload.invoiceNumber !== undefined)
     dbPayload.invoice_number = payload.invoiceNumber;
@@ -194,6 +204,15 @@ export async function updateInvoice(
     .select()
     .single();
 
+  if (!error && data) {
+    await auditService.log({
+      action: "invoice.updated",
+      entity_type: "invoice",
+      entity_id: id,
+      metadata: { status: payload.status },
+    });
+  }
+
   return {
     data: data ? mapInvoice(data as InvoiceRow) : null,
     error,
@@ -202,6 +221,14 @@ export async function updateInvoice(
 
 export async function deleteInvoice(id: string) {
   const { error } = await supabase.from("invoices").delete().eq("id", id);
+
+  if (!error) {
+    await auditService.log({
+      action: "invoice.deleted",
+      entity_type: "invoice",
+      entity_id: id,
+    });
+  }
 
   return { error };
 }

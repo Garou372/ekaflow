@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "./useToast";
 import {
   getExpenses,
   createExpense,
@@ -9,6 +10,7 @@ import type { CreateExpensePayload, Expense } from "../features/expenses/types/e
 
 export default function useExpenses() {
   const queryClient = useQueryClient();
+  const { success, error: errorToast } = useToast();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["expenses"],
@@ -23,20 +25,19 @@ export default function useExpenses() {
     mutationFn: (payload: CreateExpensePayload) => createExpense(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
+      success("Expense recorded", "New expense has been saved.");
     },
+    onError: (err: Error) => errorToast("Failed to record expense", err.message),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({
-      id,
-      payload,
-    }: {
-      id: string;
-      payload: Partial<CreateExpensePayload>;
-    }) => updateExpense(id, payload),
+    mutationFn: ({ id, payload }: { id: string; payload: Partial<CreateExpensePayload> }) =>
+      updateExpense(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
+      success("Expense updated", "Changes have been saved.");
     },
+    onError: (err: Error) => errorToast("Failed to update expense", err.message),
   });
 
   const deleteMutation = useMutation({
@@ -52,10 +53,14 @@ export default function useExpenses() {
       }
       return { previousExpenses };
     },
-    onError: (err, id, context) => {
+    onError: (err: Error, _id, context) => {
       if (context?.previousExpenses) {
         queryClient.setQueryData(["expenses"], context.previousExpenses);
       }
+      errorToast("Failed to delete expense", err.message);
+    },
+    onSuccess: () => {
+      success("Expense deleted");
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["expenses"] });

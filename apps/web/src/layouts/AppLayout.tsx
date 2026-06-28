@@ -1,12 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
+import { browserScheduler } from "../services/job.service";
+import ErrorBoundary from "../components/common/ErrorBoundary";
 import GlobalSearch from "../components/common/GlobalSearch";
 import GlobalTimer from "../components/common/GlobalTimer";
 import NotificationBell from "../components/common/NotificationBell";
+import CommandPalette from "../components/common/CommandPalette";
 
 const NAV_LINKS = [
   { to: "/", label: "Dashboard", exact: true },
+  { to: "/insights", label: "Insights", exact: false },
   { to: "/clients", label: "Clients", exact: false },
   { to: "/projects", label: "Projects", exact: false },
   { to: "/proposals", label: "Proposals", exact: false },
@@ -14,6 +18,10 @@ const NAV_LINKS = [
   { to: "/time", label: "Time", exact: false },
   { to: "/invoices", label: "Invoices", exact: false },
   { to: "/expenses", label: "Expenses", exact: false },
+  { to: "/followup", label: "Follow-up", exact: false },
+  { to: "/goals", label: "Goals", exact: false },
+  { to: "/assistant", label: "Assistant", exact: false },
+  { to: "/templates", label: "Templates", exact: false },
   { to: "/settings", label: "Settings", exact: false },
 ] as const;
 
@@ -24,6 +32,14 @@ export default function AppLayout() {
   function isActive(to: string, exact: boolean) {
     return exact ? pathname === to : pathname.startsWith(to);
   }
+
+  // Initialize Browser Scheduler
+  useEffect(() => {
+    browserScheduler.start(60000); // Check jobs every 60 seconds
+    return () => {
+      browserScheduler.stop();
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -94,9 +110,13 @@ export default function AppLayout() {
         </div>
       )}
 
-      <main className="flex-1 p-4 md:p-6">
-        <Outlet />
+      {/* Main Content Area */}
+      <main className="flex-1 overflow-auto p-4 md:p-6 bg-gray-50">
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
       </main>
+      <CommandPalette />
     </div>
   );
 }

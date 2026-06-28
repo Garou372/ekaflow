@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 import ProposalDetails from "./ProposalDetails";
 import type { ProposalDetailsForm } from "./ProposalDetails";
+import AttachmentPanel from "../../../components/common/AttachmentPanel";
 
 import ProposalItems from "./ProposalItems";
 import type { ProposalItem } from "./ProposalItems";
@@ -30,6 +31,7 @@ type ProposalFormProps = {
   isSubmitting: boolean;
 
   initialValues?: {
+    id?: string;
     title: string;
     client_id: string;
     status: "draft" | "sent" | "accepted" | "rejected";
@@ -61,6 +63,8 @@ export default function ProposalForm({
   const {
     register,
     handleSubmit,
+    setValue,
+    getValues,
     formState: { errors },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -108,7 +112,15 @@ export default function ProposalForm({
 
   return (
     <form onSubmit={handleSubmit(submit)} className="space-y-6">
-      <ProposalDetails register={register} errors={errors} clients={clients} />
+      <ProposalDetails 
+        register={register} 
+        errors={errors} 
+        clients={clients} 
+        onInsertNotes={(text) => {
+          const currentNotes = getValues("notes") || "";
+          setValue("notes", currentNotes ? `${currentNotes}\n\n${text}` : text);
+        }}
+      />
 
       <ProposalItems items={items} onChange={setItems} />
 
@@ -119,6 +131,10 @@ export default function ProposalForm({
         onTaxChange={setTax}
         onDiscountChange={setDiscount}
       />
+
+      {initialValues?.id && (
+        <AttachmentPanel entityType="proposal" entityId={initialValues.id} />
+      )}
 
       <div className="flex justify-end">
         <button

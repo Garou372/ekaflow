@@ -1,5 +1,5 @@
 import { supabase } from "../lib/supabase";
-import type { Expense, CreateExpensePayload } from "../features/expenses/types/expense";
+import type { CreateExpensePayload } from "../features/expenses/types/expense";
 
 export async function getExpenses() {
   return supabase

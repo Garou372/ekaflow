@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "./useToast";
 import {
   getProjects,
   createProject,
@@ -9,6 +10,7 @@ import type { CreateProjectPayload, Project } from "../features/projects/types/p
 
 export default function useProjects() {
   const queryClient = useQueryClient();
+  const { success, error: errorToast } = useToast();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["projects"],
@@ -23,20 +25,19 @@ export default function useProjects() {
     mutationFn: (payload: CreateProjectPayload) => createProject(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
+      success("Project created", "New project has been added.");
     },
+    onError: (err: Error) => errorToast("Failed to create project", err.message),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({
-      id,
-      payload,
-    }: {
-      id: string;
-      payload: Partial<CreateProjectPayload>;
-    }) => updateProject(id, payload),
+    mutationFn: ({ id, payload }: { id: string; payload: Partial<CreateProjectPayload> }) =>
+      updateProject(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
+      success("Project updated", "Changes have been saved.");
     },
+    onError: (err: Error) => errorToast("Failed to update project", err.message),
   });
 
   const deleteMutation = useMutation({
@@ -47,15 +48,19 @@ export default function useProjects() {
       if (previousProjects) {
         queryClient.setQueryData<Project[]>(
           ["projects"],
-          previousProjects.filter((p) => p.id !== id)
+          previousProjects.filter((p) => p.id !== id),
         );
       }
       return { previousProjects };
     },
-    onError: (err, id, context) => {
+    onError: (err: Error, _id, context) => {
       if (context?.previousProjects) {
         queryClient.setQueryData(["projects"], context.previousProjects);
       }
+      errorToast("Failed to delete project", err.message);
+    },
+    onSuccess: () => {
+      success("Project deleted");
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });

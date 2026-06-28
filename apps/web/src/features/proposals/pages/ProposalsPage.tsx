@@ -24,6 +24,7 @@ export default function ProposalsPage() {
     proposals,
     isLoading,
     createProposal,
+    updateProposal,
     deleteProposal,
     creating,
     updating,
@@ -44,6 +45,7 @@ export default function ProposalsPage() {
   >();
 
   // Proposal being converted to an invoice
+  const [convertingProposal, setConvertingProposal] = useState<
     Proposal | undefined
   >();
 

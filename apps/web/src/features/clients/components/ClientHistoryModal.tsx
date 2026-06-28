@@ -1,10 +1,11 @@
 import { useEffect } from "react";
-import { FileText, FileCheck, X } from "lucide-react";
+import { X } from "lucide-react";
 import type { Client } from "../../../services/client.service";
 import type { Invoice } from "../../invoices/types/invoice";
 import type { Proposal } from "../../../services/proposal.service";
-import { formatCurrency } from "../../invoices/utils/currency";
-import { calculateInvoice } from "../../invoices/utils/calculateInvoice";
+import ClientTimeline from "./ClientTimeline";
+import useProjects from "../../../hooks/useProjects";
+import { useClientNotes } from "../../../hooks/useClients";
 
 type ClientHistoryModalProps = {
   client: Client;
@@ -28,29 +29,12 @@ export default function ClientHistoryModal({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-  // Combine and sort chronological descending
-  const timeline = [
-    ...invoices
-      .filter((i) => i.clientId === client.id)
-      .map((i) => ({
-        id: `inv-${i.id}`,
-        type: "invoice" as const,
-        title: `Invoice ${i.invoiceNumber}`,
-        status: i.status,
-        date: new Date(i.createdAt),
-        amount: calculateInvoice(i.lineItems, i.discountRate, i.taxRate).total,
-      })),
-    ...proposals
-      .filter((p) => p.client_id === client.id)
-      .map((p) => ({
-        id: `prop-${p.id}`,
-        type: "proposal" as const,
-        title: `Proposal: ${p.title}`,
-        status: p.status,
-        date: new Date(p.created_at),
-        amount: p.budget || 0,
-      })),
-  ].sort((a, b) => b.date.getTime() - a.date.getTime());
+  const { projects: allProjects = [] } = useProjects();
+  const { notes } = useClientNotes(client.id);
+
+  const projects = allProjects.filter((p: any) => p.client_id === client.id);
+  const clientInvoices = invoices.filter((i) => i.clientId === client.id);
+  const clientProposals = proposals.filter((p) => p.client_id === client.id);
 
   return (
     <div
@@ -82,41 +66,12 @@ export default function ClientHistoryModal({
         </div>
 
         <div className="flex-1 overflow-y-auto p-6">
-          {timeline.length === 0 ? (
-            <div className="flex h-full flex-col items-center justify-center text-gray-500 text-center">
-              <p>No history found for this client.</p>
-            </div>
-          ) : (
-            <div className="relative border-l border-gray-200 ml-3 space-y-8 pb-8">
-              {timeline.map((item) => (
-                <div key={item.id} className="relative pl-6">
-                  {/* Timeline dot */}
-                  <div
-                    className={`absolute -left-4 flex h-8 w-8 items-center justify-center rounded-full ring-4 ring-white ${
-                      item.type === "invoice" ? "bg-indigo-100 text-indigo-600" : "bg-emerald-100 text-emerald-600"
-                    }`}
-                  >
-                    {item.type === "invoice" ? <FileText size={14} /> : <FileCheck size={14} />}
-                  </div>
-
-                  <div className="rounded-lg border bg-gray-50 p-4">
-                    <div className="flex justify-between">
-                      <h4 className="font-medium text-gray-900">{item.title}</h4>
-                      <span className="font-semibold text-gray-900">
-                        {formatCurrency(item.amount)}
-                      </span>
-                    </div>
-                    <div className="mt-2 flex items-center justify-between text-sm text-gray-500">
-                      <span>{item.date.toLocaleDateString()}</span>
-                      <span className="capitalize rounded-full px-2 py-0.5 bg-gray-200 text-gray-700 text-xs font-medium">
-                        {item.status}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <ClientTimeline 
+            invoices={clientInvoices} 
+            proposals={clientProposals} 
+            projects={projects} 
+            notes={notes} 
+          />
         </div>
       </div>
     </div>

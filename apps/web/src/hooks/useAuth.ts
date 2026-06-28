@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
-
+import { queryClient } from "../lib/query-client";
 import { supabase } from "../lib/supabase";
 
 import {
@@ -58,6 +58,8 @@ export default function useAuth() {
 
     if (error) {
       console.error(error);
+    } else {
+      queryClient.clear(); // Clear all sensitive React Query data on logout
     }
   }, []);
 

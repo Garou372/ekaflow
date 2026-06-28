@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Bell, CheckCircle, Info, AlertTriangle, FileText, Check } from "lucide-react";
 import { Link } from "react-router-dom";
-import useNotifications from "../../../hooks/useNotifications";
-import type { NotificationType } from "../../notifications/types/notification";
+import useNotifications from "../../hooks/useNotifications";
+import type { NotificationType } from "../../features/notifications/types/notification";
 
 export default function NotificationBell() {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();

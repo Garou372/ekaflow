@@ -79,7 +79,9 @@ export default function PortalDashboardPage() {
           <PortalProposalView
             proposal={entity}
             client={client}
-            onAccept={() => acceptPortalProposal(token)}
+            onAccept={async () => {
+              await acceptPortalProposal(token!);
+            }}
           />
         )}
         

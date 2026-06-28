@@ -1,5 +1,5 @@
 import { supabase } from "../lib/supabase";
-import type { Notification, CreateNotificationPayload } from "../features/notifications/types/notification";
+import type { CreateNotificationPayload } from "../features/notifications/types/notification";
 
 export async function getNotifications() {
   return supabase

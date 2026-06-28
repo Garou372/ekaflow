@@ -1,4 +1,4 @@
-import { InvoiceItem } from "./invoice";
+import type { InvoiceLineItem } from "./invoice";
 
 export type RecurringFrequency = "weekly" | "monthly" | "yearly";
 export type RecurringStatus = "active" | "paused" | "cancelled";
@@ -12,7 +12,7 @@ export interface RecurringInvoice {
   last_run_date: string | null; // YYYY-MM-DD
   status: RecurringStatus;
   template_data: {
-    items: InvoiceItem[];
+    items: InvoiceLineItem[];
     taxRate: number;
     discountRate: number;
     notes?: string;

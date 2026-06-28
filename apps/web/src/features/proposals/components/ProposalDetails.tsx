@@ -1,5 +1,6 @@
 import type { UseFormRegister, FieldErrors } from "react-hook-form";
 import type { ProposalStatus } from "../../../services/proposal.service";
+import AIAssistantPanel from "../../ai/components/AIAssistantPanel";
 
 export type ProposalDetailsForm = {
   title: string;
@@ -15,12 +16,14 @@ type ProposalDetailsProps = {
     id: string;
     name: string;
   }[];
+  onInsertNotes?: (text: string) => void;
 };
 
 export default function ProposalDetails({
   register,
   errors,
   clients,
+  onInsertNotes,
 }: ProposalDetailsProps) {
   return (
     <div className="rounded-xl border bg-white p-6 shadow-sm space-y-5">
@@ -80,15 +83,24 @@ export default function ProposalDetails({
         </div>
       </div>
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Notes</label>
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Notes & Overview</label>
+          <textarea
+            rows={5}
+            {...register("notes")}
+            placeholder="Describe the proposal, deliverables, or add any notes for the client..."
+            className="w-full rounded-lg border px-3 py-2"
+          />
+        </div>
 
-        <textarea
-          rows={5}
-          {...register("notes")}
-          placeholder="Additional notes..."
-          className="w-full rounded-lg border px-3 py-2"
-        />
+        {onInsertNotes && (
+          <AIAssistantPanel
+            compact={true}
+            defaultTask="improve_proposal"
+            onInsert={onInsertNotes}
+          />
+        )}
       </div>
     </div>
   );

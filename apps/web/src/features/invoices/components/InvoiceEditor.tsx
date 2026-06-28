@@ -6,7 +6,8 @@ import InvoiceDetails from "./InvoiceDetails";
 import InvoiceItems from "./InvoiceItems";
 import InvoiceSummary from "./InvoiceSummary";
 import InvoicePreview from "./InvoicePreview";
-import useAIService from "../../../hooks/useAIService";
+import AIAssistantPanel from "../../ai/components/AIAssistantPanel";
+import AttachmentPanel from "../../../components/common/AttachmentPanel";
 
 import {
   invoiceSchema,
@@ -56,8 +57,6 @@ export default function InvoiceEditor({
   const [mobileTab, setMobileTab] = useState<"edit" | "preview">("edit");
   const [isRecurring, setIsRecurring] = useState(false);
   const [frequency, setFrequency] = useState<"weekly" | "monthly" | "yearly">("monthly");
-  
-  const { generateText, isGenerating } = useAIService();
 
   const {
     register,
@@ -65,9 +64,10 @@ export default function InvoiceEditor({
     watch,
     control,
     setValue,
+    getValues,
     formState: { errors },
   } = useForm<InvoiceFormValues>({
-    resolver: zodResolver(invoiceSchema),
+    resolver: zodResolver(invoiceSchema) as any,
     defaultValues: initialValues
       ? {
           clientId: initialValues.clientId,
@@ -131,13 +131,6 @@ export default function InvoiceEditor({
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
-
-  const handleAIGenerateNotes = async () => {
-    const generated = await generateText("Generate professional invoice notes.");
-    if (generated) {
-      setValue("notes", generated, { shouldDirty: true, shouldValidate: true });
-    }
-  };
 
   async function submit(data: InvoiceFormValues) {
     const input: CreateInvoiceInput = {
@@ -252,30 +245,38 @@ export default function InvoiceEditor({
               </div>
 
               {/* Notes */}
-              <div className="rounded-xl border bg-white p-6 shadow-sm space-y-2">
-                <div className="flex items-center justify-between">
+              <div className="rounded-xl border bg-white p-6 shadow-sm space-y-4">
+                <div className="space-y-2">
                   <label htmlFor="invoice-notes" className="text-sm font-medium">
                     Notes{" "}
                     <span className="text-gray-400 font-normal">(optional)</span>
                   </label>
-                  <button
-                    type="button"
-                    onClick={handleAIGenerateNotes}
-                    disabled={isGenerating}
-                    className="text-xs font-medium text-indigo-600 hover:text-indigo-800 disabled:opacity-50 flex items-center gap-1 bg-indigo-50 px-2 py-1 rounded"
-                  >
-                    {isGenerating ? "Generating..." : "✨ AI: Enhance Notes"}
-                  </button>
+
+                  <textarea
+                    id="invoice-notes"
+                    rows={4}
+                    {...register("notes")}
+                    placeholder="Additional notes for the client..."
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-indigo-600"
+                  />
                 </div>
 
-                <textarea
-                  id="invoice-notes"
-                  rows={4}
-                  {...register("notes")}
-                  placeholder="Additional notes for the client..."
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-indigo-600"
+                <AIAssistantPanel
+                  compact={true}
+                  defaultTask="improve_proposal"
+                  onInsert={(text) => {
+                    const currentNotes = getValues("notes") || "";
+                    setValue("notes", currentNotes ? `${currentNotes}\n\n${text}` : text, { shouldDirty: true, shouldValidate: true });
+                  }}
                 />
               </div>
+
+              {/* Attachments */}
+              {isEditing && initialValues?.id && (
+                <div className="mt-6">
+                  <AttachmentPanel entityType="invoice" entityId={initialValues.id} />
+                </div>
+              )}
 
               {/* Recurring Settings */}
               {!isEditing && (

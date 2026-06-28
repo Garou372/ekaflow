@@ -1,5 +1,5 @@
 import { supabase } from "../lib/supabase";
-import type { TimeEntry, CreateTimeEntryPayload, UpdateTimeEntryPayload } from "../features/time/types/time";
+import type { CreateTimeEntryPayload, UpdateTimeEntryPayload } from "../features/time/types/time";
 
 export async function getTimeEntries() {
   return supabase

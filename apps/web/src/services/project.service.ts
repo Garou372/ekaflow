@@ -1,5 +1,5 @@
 import { supabase } from "../lib/supabase";
-import type { Project, CreateProjectPayload } from "../features/projects/types/project";
+import type { CreateProjectPayload } from "../features/projects/types/project";
 
 export async function getProjects() {
   return supabase

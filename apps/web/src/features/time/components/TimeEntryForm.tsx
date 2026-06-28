@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { Project } from "../../projects/types/project";
-import type { CreateTimeEntryPayload, TimeEntry } from "../types/time";
+import type { CreateTimeEntryPayload } from "../types/time";
 
 const timeEntrySchema = z.object({
   project_id: z.string().min(1, "Project is required"),
@@ -34,7 +34,7 @@ export default function TimeEntryForm({
     handleSubmit,
     formState: { errors },
   } = useForm<TimeEntryFormData>({
-    resolver: zodResolver(timeEntrySchema),
+    resolver: zodResolver(timeEntrySchema) as any,
     defaultValues: initialValues || {
       date: new Date().toISOString().split("T")[0],
     },

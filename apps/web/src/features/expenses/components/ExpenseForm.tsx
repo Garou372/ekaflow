@@ -4,6 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { Project } from "../../projects/types/project";
 import type { CreateExpensePayload } from "../types/expense";
+import AttachmentPanel from "../../../components/common/AttachmentPanel";
 
 const expenseSchema = z.object({
   project_id: z.string().nullish(),
@@ -28,7 +29,7 @@ const EXPENSE_CATEGORIES = [
 
 type Props = {
   projects: Project[];
-  initialValues?: Partial<ExpenseFormData>;
+  initialValues?: Partial<ExpenseFormData> & { id?: string };
   onSubmit: (data: CreateExpensePayload) => Promise<void>;
   onClose: () => void;
   isSubmitting: boolean;
@@ -46,7 +47,7 @@ export default function ExpenseForm({
     handleSubmit,
     formState: { errors },
   } = useForm<ExpenseFormData>({
-    resolver: zodResolver(expenseSchema),
+    resolver: zodResolver(expenseSchema) as any,
     defaultValues: initialValues || {
       date: new Date().toISOString().split("T")[0],
     },
@@ -158,6 +159,13 @@ export default function ExpenseForm({
               className="w-full rounded-lg border px-3 py-2 outline-none focus:border-indigo-600"
             />
           </div>
+
+
+          {initialValues?.id && (
+            <div className="pt-2">
+              <AttachmentPanel entityType="expense" entityId={initialValues.id} />
+            </div>
+          )}
 
           <div className="mt-6 flex justify-end gap-3 pt-4 border-t">
             <button

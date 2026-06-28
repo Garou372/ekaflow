@@ -4,12 +4,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import type { Client } from "../../../services/client.service";
 import type { CreateProjectPayload } from "../types/project";
+import AttachmentPanel from "../../../components/common/AttachmentPanel";
 
 const projectSchema = z.object({
   client_id: z.string().min(1, "Please select a client."),
   name: z.string().min(1, "Project name is required."),
   description: z.string().nullish(),
-  status: z.enum(["active", "completed", "on_hold"]).default("active"),
+  status: z.enum(["active", "completed", "on_hold"]).optional(),
   budget: z.coerce.number().min(0).nullish(),
   hourly_rate: z.coerce.number().min(0).nullish(),
   start_date: z.string().nullish(),
@@ -21,7 +22,7 @@ export type ProjectFormData = z.infer<typeof projectSchema>;
 
 type Props = {
   clients: Client[];
-  initialValues?: Partial<ProjectFormData>;
+  initialValues?: Partial<ProjectFormData> & { id?: string };
   onSubmit: (data: CreateProjectPayload) => Promise<void>;
   onClose: () => void;
   isSubmitting: boolean;
@@ -39,7 +40,7 @@ export default function ProjectForm({
     handleSubmit,
     formState: { errors },
   } = useForm<ProjectFormData>({
-    resolver: zodResolver(projectSchema),
+    resolver: zodResolver(projectSchema) as any,
     defaultValues: initialValues || {
       status: "active",
     },
@@ -58,7 +59,7 @@ export default function ProjectForm({
       client_id: data.client_id,
       name: data.name,
       description: data.description || null,
-      status: data.status,
+      status: data.status || "active",
       budget: data.budget || null,
       hourly_rate: data.hourly_rate || null,
       start_date: data.start_date || null,
@@ -188,6 +189,12 @@ export default function ProjectForm({
               className="w-full rounded-lg border px-3 py-2 outline-none focus:border-indigo-600"
             />
           </div>
+
+          {initialValues?.id && (
+            <div className="pt-2">
+              <AttachmentPanel entityType="project" entityId={initialValues.id} />
+            </div>
+          )}
 
           <div className="mt-6 flex justify-end gap-3 pt-4 border-t sticky bottom-0 bg-white">
             <button

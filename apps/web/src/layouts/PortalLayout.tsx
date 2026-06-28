@@ -1,4 +1,5 @@
 import { Outlet } from "react-router-dom";
+import ErrorBoundary from "../components/common/ErrorBoundary";
 
 export default function PortalLayout() {
   return (
@@ -10,7 +11,9 @@ export default function PortalLayout() {
       </header>
 
       <main className="flex-1 p-4 md:p-8 max-w-5xl mx-auto w-full">
-        <Outlet />
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
       </main>
       
       <footer className="py-6 text-center text-sm text-gray-400">

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Play, Square, Pause } from "lucide-react";
 import useProjects from "../../hooks/useProjects";
 import useTimeEntries from "../../hooks/useTimeEntries";
@@ -151,6 +151,7 @@ export default function GlobalTimer() {
             onClick={handleStart}
             className="text-gray-500 hover:text-emerald-600 transition-colors"
             title="Start timer"
+            aria-label="Start timer"
           >
             <Play size={18} />
           </button>
@@ -159,6 +160,7 @@ export default function GlobalTimer() {
             onClick={handlePause}
             className="text-amber-500 hover:text-amber-600 transition-colors"
             title="Pause timer"
+            aria-label="Pause timer"
           >
             <Pause size={18} />
           </button>
@@ -166,8 +168,10 @@ export default function GlobalTimer() {
         {(state.isRunning || state.elapsedWhenPaused > 0) && (
           <button
             onClick={handleStop}
-            className="text-gray-500 hover:text-red-600 transition-colors"
+            disabled={!state.projectId && state.elapsedWhenPaused === 0}
+            className="text-gray-400 hover:text-red-600 transition-colors disabled:opacity-30 disabled:hover:text-gray-400"
             title="Stop and save"
+            aria-label="Stop and save"
           >
             <Square size={18} />
           </button>

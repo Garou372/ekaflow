@@ -11,8 +11,11 @@ import useInvoices from "../../../hooks/useInvoices";
 import useProposals from "../../../hooks/useProposals";
 import useClients from "../../../hooks/useClients";
 import useExpenses from "../../../hooks/useExpenses";
+import useRecurringInvoices from "../../../hooks/useRecurringInvoices";
 
 import { calculateDashboardMetrics, getMonthlyMetrics } from "../utils/metrics";
+import { buildCashFlowForecast } from "../utils/cashflow";
+import CashFlowWidget from "../components/CashFlowWidget";
 import { calculateInvoice } from "../../invoices/utils/calculateInvoice";
 import type { InvoiceWithRelations } from "../../invoices/types/invoice";
 import { formatCurrency } from "../../invoices/utils/currency";
@@ -22,8 +25,9 @@ export default function DashboardPage() {
   const { proposals, isLoading: loadingProposals } = useProposals();
   const { clients, isLoading: loadingClients } = useClients();
   const { expenses, isLoading: loadingExpenses } = useExpenses();
+  const { recurringInvoices, isLoading: loadingRecurring } = useRecurringInvoices();
 
-  const isLoading = loadingInvoices || loadingProposals || loadingClients || loadingExpenses;
+  const isLoading = loadingInvoices || loadingProposals || loadingClients || loadingExpenses || loadingRecurring;
 
   const enrichedInvoices = useMemo((): InvoiceWithRelations[] => {
     return invoices.map((invoice) => ({
@@ -46,6 +50,10 @@ export default function DashboardPage() {
   const monthlyMetrics = useMemo(() => {
     return getMonthlyMetrics(enrichedInvoices, expenses);
   }, [enrichedInvoices, expenses]);
+
+  const cashFlowForecast = useMemo(() => {
+    return buildCashFlowForecast(invoices, expenses, recurringInvoices, 6);
+  }, [invoices, expenses, recurringInvoices]);
 
   if (isLoading) {
     return (
@@ -108,6 +116,7 @@ export default function DashboardPage() {
         </div>
         
         <div className="space-y-6">
+          <CashFlowWidget summary={cashFlowForecast} />
           <OverdueList invoices={enrichedInvoices} />
           <RecentActivity invoices={enrichedInvoices} proposals={proposals} clients={clients} />
         </div>

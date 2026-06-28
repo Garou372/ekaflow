@@ -1,14 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "./useToast";
 import {
   getTimeEntries,
   createTimeEntry,
   updateTimeEntry,
   deleteTimeEntry,
 } from "../services/time.service";
-import type { CreateTimeEntryPayload, UpdateTimeEntryPayload, TimeEntry } from "../features/time/types/time";
+import type {
+  CreateTimeEntryPayload,
+  UpdateTimeEntryPayload,
+  TimeEntry,
+} from "../features/time/types/time";
 
 export default function useTimeEntries() {
   const queryClient = useQueryClient();
+  const { success, error: errorToast } = useToast();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["time_entries"],
@@ -23,20 +29,18 @@ export default function useTimeEntries() {
     mutationFn: (payload: CreateTimeEntryPayload) => createTimeEntry(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["time_entries"] });
+      success("Time logged", "Time entry has been saved.");
     },
+    onError: (err: Error) => errorToast("Failed to log time", err.message),
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({
-      id,
-      payload,
-    }: {
-      id: string;
-      payload: UpdateTimeEntryPayload;
-    }) => updateTimeEntry(id, payload),
+    mutationFn: ({ id, payload }: { id: string; payload: UpdateTimeEntryPayload }) =>
+      updateTimeEntry(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["time_entries"] });
     },
+    onError: (err: Error) => errorToast("Failed to update time entry", err.message),
   });
 
   const deleteMutation = useMutation({
@@ -52,11 +56,13 @@ export default function useTimeEntries() {
       }
       return { previousEntries };
     },
-    onError: (err, id, context) => {
+    onError: (err: Error, _id, context) => {
       if (context?.previousEntries) {
         queryClient.setQueryData(["time_entries"], context.previousEntries);
       }
+      errorToast("Failed to delete time entry", err.message);
     },
+    onSuccess: () => success("Time entry deleted"),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["time_entries"] });
     },
