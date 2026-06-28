@@ -9,6 +9,7 @@ import InvoicePreview from "../components/InvoicePreview";
 import RecurringInvoicesList from "../components/RecurringInvoicesList";
 import PaymentModal, { type PaymentFormData } from "../components/PaymentModal";
 import DeleteConfirmModal from "../../../components/common/DeleteConfirmModal";
+import UsageLimitGuard from "../../../components/common/UsageLimitGuard";
 
 import useInvoices from "../../../hooks/useInvoices";
 import useRecurringInvoices from "../../../hooks/useRecurringInvoices";
@@ -283,16 +284,23 @@ export default function InvoicesPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Invoices" description="Create and manage invoices.">
-        <button
-          type="button"
-          onClick={() => {
+        <UsageLimitGuard
+          action="create_invoice"
+          onProceed={() => {
             setEditingInvoice(undefined);
             setOpen(true);
           }}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
         >
-          + New Invoice
-        </button>
+          {({ onClick }) => (
+            <button
+              type="button"
+              onClick={onClick}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
+            >
+              + New Invoice
+            </button>
+          )}
+        </UsageLimitGuard>
       </PageHeader>
 
       {isLoading ? (
@@ -404,13 +412,20 @@ export default function InvoicesPage() {
             </p>
 
             {!search && !statusFilter && (
-              <button
-                type="button"
-                onClick={() => setOpen(true)}
-                className="mt-6 rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
+              <UsageLimitGuard
+                action="create_invoice"
+                onProceed={() => setOpen(true)}
               >
-                New Invoice
-              </button>
+                {({ onClick }) => (
+                  <button
+                    type="button"
+                    onClick={onClick}
+                    className="mt-6 rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
+                  >
+                    New Invoice
+                  </button>
+                )}
+              </UsageLimitGuard>
             )}
           </div>
         ) : (

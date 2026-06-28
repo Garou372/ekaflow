@@ -13,6 +13,7 @@ import LoadingPage from "../components/common/LoadingPage";
 const DashboardPage = lazy(() => import("../features/dashboard/pages/DashboardPage"));
 const LoginPage = lazy(() => import("../features/auth/pages/LoginPage"));
 const SignupPage = lazy(() => import("../features/auth/pages/SignupPage"));
+const AuthCallbackPage = lazy(() => import("../features/auth/pages/AuthCallbackPage"));
 
 const ClientsPage = lazy(() => import("../features/clients/pages/ClientsPage"));
 const ProjectsPage = lazy(() => import("../features/projects/pages/ProjectsPage"));
@@ -21,6 +22,10 @@ const CalendarPage = lazy(() => import("../features/calendar/pages/CalendarPage"
 const TimeTrackingPage = lazy(() => import("../features/time/pages/TimeTrackingPage"));
 const InvoicesPage = lazy(() => import("../features/invoices/pages/InvoicesPage"));
 const ExpensesPage = lazy(() => import("../features/expenses/pages/ExpensesPage"));
+const BillingPage = lazy(() => import("../features/billing/pages/BillingPage"));
+const TeamPage = lazy(() => import("../features/team/pages/TeamPage"));
+const AcceptInvitePage = lazy(() => import("../features/team/pages/AcceptInvitePage"));
+const AdminPage = lazy(() => import("../features/admin/pages/AdminPage"));
 const SettingsPage = lazy(() => import("../features/settings/pages/SettingsPage"));
 const TemplatesPage = lazy(() => import("../features/settings/pages/TemplatesPage"));
 const InsightsPage = lazy(() => import("../features/insights/pages/InsightsPage"));
@@ -77,6 +82,18 @@ export const router = createBrowserRouter([
                 element: <SuspenseWrapper><ExpensesPage /></SuspenseWrapper>,
               },
               {
+                path: "billing",
+                element: <SuspenseWrapper><BillingPage /></SuspenseWrapper>,
+              },
+              {
+                path: "team",
+                element: <SuspenseWrapper><TeamPage /></SuspenseWrapper>,
+              },
+              {
+                path: "admin",
+                element: <SuspenseWrapper><AdminPage /></SuspenseWrapper>,
+              },
+              {
                 path: "settings",
                 element: <SuspenseWrapper><SettingsPage /></SuspenseWrapper>,
               },
@@ -115,6 +132,10 @@ export const router = createBrowserRouter([
             path: "signup",
             element: <SuspenseWrapper><SignupPage /></SuspenseWrapper>,
           },
+          {
+            path: "auth/callback",
+            element: <SuspenseWrapper><AuthCallbackPage /></SuspenseWrapper>,
+          },
         ],
       },
       {
@@ -127,6 +148,10 @@ export const router = createBrowserRouter([
           },
         ],
       },
+      {
+        path: "/accept-invite/:token",
+        element: <SuspenseWrapper><AcceptInvitePage /></SuspenseWrapper>,
+      }
     ],
   },
 ]);

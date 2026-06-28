@@ -3,6 +3,7 @@ import { Sparkles, Copy, Check, ChevronDown } from "lucide-react";
 import { aiService } from "../../../services/ai.service";
 import type { AITaskType } from "../../../services/ai/AIProvider";
 import { useToast } from "../../../hooks/useToast";
+import UsageLimitGuard from "../../../components/common/UsageLimitGuard";
 
 // ─── Task Config ──────────────────────────────────────────────────────────────
 
@@ -145,23 +146,27 @@ export default function AIAssistantPanel({
       />
 
       {/* Generate button */}
-      <button
-        onClick={handleGenerate}
-        disabled={isGenerating || !context.trim()}
-        className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-      >
-        {isGenerating ? (
-          <>
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-            Generating...
-          </>
-        ) : (
-          <>
-            <Sparkles size={14} />
-            Generate with AI
-          </>
+      <UsageLimitGuard action="use_ai" onProceed={handleGenerate}>
+        {({ onClick }) => (
+          <button
+            onClick={onClick}
+            disabled={isGenerating || !context.trim()}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+          >
+            {isGenerating ? (
+              <>
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Sparkles size={14} />
+                Generate with AI
+              </>
+            )}
+          </button>
         )}
-      </button>
+      </UsageLimitGuard>
 
       {/* Result */}
       {result && (

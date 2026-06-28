@@ -10,6 +10,7 @@ import ClientCard from "../components/ClientCard";
 import ClientForm from "../components/ClientForm";
 import ClientHistoryModal from "../components/ClientHistoryModal";
 import DeleteConfirmModal from "../../../components/common/DeleteConfirmModal";
+import UsageLimitGuard from "../../../components/common/UsageLimitGuard";
 import type { ClientFormData } from "../components/ClientForm";
 
 import useInvoices from "../../../hooks/useInvoices";
@@ -139,15 +140,22 @@ export default function ClientsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Clients" description="Manage your client relationships">
-        <button
-          onClick={() => {
+        <UsageLimitGuard
+          action="create_client"
+          onProceed={() => {
             setEditingClient(undefined);
             setOpen(true);
           }}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
         >
-          + New Client
-        </button>
+          {({ onClick }) => (
+            <button
+              onClick={onClick}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+            >
+              + New Client
+            </button>
+          )}
+        </UsageLimitGuard>
       </PageHeader>
 
       {isLoading ? (
@@ -248,12 +256,19 @@ export default function ClientsPage() {
               : "Try adjusting your search or filters."}
           </p>
           {clients.length === 0 && (
-            <button
-              onClick={() => setOpen(true)}
-              className="mt-6 rounded-lg bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700"
+            <UsageLimitGuard
+              action="create_client"
+              onProceed={() => setOpen(true)}
             >
-              Add Client
-            </button>
+              {({ onClick }) => (
+                <button
+                  onClick={onClick}
+                  className="mt-6 rounded-lg bg-indigo-600 px-4 py-2 text-sm text-white hover:bg-indigo-700"
+                >
+                  Add Client
+                </button>
+              )}
+            </UsageLimitGuard>
           )}
         </div>
       ) : (

@@ -7,6 +7,7 @@ import {
   login as authLogin,
   signup as authSignup,
   logout as authLogout,
+  loginWithGoogle as authLoginWithGoogle,
   getSession,
   getUser,
   type LoginCredentials,
@@ -53,6 +54,10 @@ export default function useAuth() {
     return await authSignup(payload);
   }, []);
 
+  const loginWithGoogle = useCallback(async () => {
+    return await authLoginWithGoogle();
+  }, []);
+
   const logout = useCallback(async () => {
     const { error } = await authLogout();
 
@@ -70,6 +75,7 @@ export default function useAuth() {
     isAuthenticated: !!session,
     login,
     signup,
+    loginWithGoogle,
     logout,
   };
 }

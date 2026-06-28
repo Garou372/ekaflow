@@ -7,6 +7,8 @@ import GlobalSearch from "../components/common/GlobalSearch";
 import GlobalTimer from "../components/common/GlobalTimer";
 import NotificationBell from "../components/common/NotificationBell";
 import CommandPalette from "../components/common/CommandPalette";
+import WorkspaceSwitcher from "../components/common/WorkspaceSwitcher";
+import FeedbackWidget from "../components/common/FeedbackWidget";
 
 const NAV_LINKS = [
   { to: "/", label: "Dashboard", exact: true },
@@ -23,6 +25,8 @@ const NAV_LINKS = [
   { to: "/assistant", label: "Assistant", exact: false },
   { to: "/templates", label: "Templates", exact: false },
   { to: "/settings", label: "Settings", exact: false },
+  { to: "/team", label: "Team", exact: false },
+  { to: "/billing", label: "Billing", exact: false },
 ] as const;
 
 export default function AppLayout() {
@@ -53,9 +57,12 @@ export default function AppLayout() {
             {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
           
-          <span className="text-xl font-bold text-indigo-700 shrink-0">
-            EkaFlow
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-xl font-bold text-indigo-700 shrink-0 hidden lg:block">
+              EkaFlow
+            </span>
+            <WorkspaceSwitcher />
+          </div>
 
           <nav className="hidden md:flex items-center gap-1">
             {NAV_LINKS.map(({ to, label, exact }) => (
@@ -117,6 +124,7 @@ export default function AppLayout() {
         </ErrorBoundary>
       </main>
       <CommandPalette />
+      <FeedbackWidget />
     </div>
   );
 }

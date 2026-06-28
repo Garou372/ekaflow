@@ -58,8 +58,19 @@ export async function signup({ fullName, email, password }: SignupCredentials) {
   };
 }
 
+export async function loginWithGoogle() {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: `${window.location.origin}/auth/callback`,
+    },
+  });
+
+  return { data, error };
+}
+
 export async function logout() {
-  const { error } = await supabase.auth.signOut();
+  const { error } = await supabase.auth.signOut({ scope: "global" });
 
   return {
     error,
