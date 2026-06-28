@@ -9,9 +9,9 @@ import {
 
 import type {
   CreateInvoiceInput,
+  Invoice,
+  InvoiceStatus,
 } from "../features/invoices/types/invoice";
-
-import type { InvoiceStatus } from "../features/invoices/types/invoice";
 
 export default function useInvoices() {
   const queryClient = useQueryClient();
@@ -56,7 +56,27 @@ export default function useInvoices() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deleteInvoice(id),
 
-    onSuccess: () => {
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ["invoices"] });
+      const previousInvoices = queryClient.getQueryData<Invoice[]>(["invoices"]);
+
+      if (previousInvoices) {
+        queryClient.setQueryData<Invoice[]>(
+          ["invoices"],
+          previousInvoices.filter((inv) => inv.id !== id)
+        );
+      }
+
+      return { previousInvoices };
+    },
+
+    onError: (err, newTodo, context) => {
+      if (context?.previousInvoices) {
+        queryClient.setQueryData(["invoices"], context.previousInvoices);
+      }
+    },
+
+    onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: ["invoices"],
       });
@@ -69,7 +89,29 @@ export default function useInvoices() {
     mutationFn: ({ id, status }: { id: string; status: InvoiceStatus }) =>
       updateInvoice(id, { status }),
 
-    onSuccess: () => {
+    onMutate: async ({ id, status }) => {
+      await queryClient.cancelQueries({ queryKey: ["invoices"] });
+      const previousInvoices = queryClient.getQueryData<Invoice[]>(["invoices"]);
+
+      if (previousInvoices) {
+        queryClient.setQueryData<Invoice[]>(
+          ["invoices"],
+          previousInvoices.map((inv) =>
+            inv.id === id ? { ...inv, status } : inv
+          )
+        );
+      }
+
+      return { previousInvoices };
+    },
+
+    onError: (err, newTodo, context) => {
+      if (context?.previousInvoices) {
+        queryClient.setQueryData(["invoices"], context.previousInvoices);
+      }
+    },
+
+    onSettled: () => {
       queryClient.invalidateQueries({
         queryKey: ["invoices"],
       });

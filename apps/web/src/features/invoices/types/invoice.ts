@@ -75,6 +75,10 @@ export interface Invoice {
 
   notes: string | null;
 
+  paidAmount: number | null;
+
+  paymentDate: string | null;
+
   createdAt: string;
 
   updatedAt: string;
@@ -100,6 +104,10 @@ export interface CreateInvoiceInput {
   taxRate: number;
 
   notes?: string | null;
+
+  paidAmount?: number | null;
+
+  paymentDate?: string | null;
 }
 
 export interface UpdateInvoiceInput extends Partial<CreateInvoiceInput> {

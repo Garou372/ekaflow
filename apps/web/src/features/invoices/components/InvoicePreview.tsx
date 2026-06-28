@@ -3,6 +3,7 @@ import type { InvoiceFormValues } from "../validation/invoice.schema";
 
 import { calculateInvoice } from "../utils/calculateInvoice";
 import { formatCurrency } from "../utils/currency";
+import { getCompanyInfo } from "../../settings/utils/companyInfo";
 
 type Client = {
   id: string;
@@ -23,6 +24,8 @@ export default function InvoicePreview({ data, clients }: Props) {
     data.taxRate ?? 0,
   );
 
+  const companyInfo = getCompanyInfo();
+
   return (
     <div className="rounded-xl border bg-white p-8 shadow-sm">
       {/* Header */}
@@ -36,11 +39,21 @@ export default function InvoicePreview({ data, clients }: Props) {
         </div>
 
         <div className="text-right">
-          <p className="text-lg font-semibold">Your Company</p>
-
-          <p className="text-sm text-gray-500">Company Address</p>
-
-          <p className="text-sm text-gray-500">City, State</p>
+          <p className="text-lg font-semibold">{companyInfo.companyName}</p>
+          
+          <p className="text-sm text-gray-500 whitespace-pre-wrap mt-1">{companyInfo.address}</p>
+          
+          <p className="text-sm text-gray-500 mt-1">{companyInfo.email}</p>
+          
+          {companyInfo.website && (
+            <p className="text-sm text-gray-500">{companyInfo.website}</p>
+          )}
+          
+          {companyInfo.taxId && (
+            <p className="text-sm text-gray-500 mt-1 font-medium">
+              Tax ID: {companyInfo.taxId}
+            </p>
+          )}
         </div>
       </div>
 

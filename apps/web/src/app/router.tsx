@@ -13,6 +13,7 @@ import SignupPage from "../features/auth/pages/SignupPage";
 import ClientsPage from "../features/clients/pages/ClientsPage";
 import ProposalsPage from "../features/proposals/pages/ProposalsPage";
 import InvoicesPage from "../features/invoices/pages/InvoicesPage";
+import SettingsPage from "../features/settings/pages/SettingsPage";
 
 export const router = createBrowserRouter([
   {
@@ -40,6 +41,10 @@ export const router = createBrowserRouter([
               {
                 path: "invoices",
                 element: <InvoicesPage />,
+              },
+              {
+                path: "settings",
+                element: <SettingsPage />,
               },
             ],
           },

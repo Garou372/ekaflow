@@ -30,6 +30,10 @@ type InvoiceRow = {
 
   notes: string | null;
 
+  paid_amount: number | null;
+
+  payment_date: string | null;
+
   created_at: string;
   updated_at: string;
 };
@@ -64,6 +68,10 @@ function mapInvoice(row: InvoiceRow): Invoice {
     taxRate: row.tax_rate ?? 0,
 
     notes: row.notes,
+
+    paidAmount: row.paid_amount ?? 0,
+
+    paymentDate: row.payment_date,
 
     createdAt: row.created_at,
 
@@ -129,6 +137,10 @@ export async function createInvoice(payload: CreateInvoiceInput) {
       tax_rate: payload.taxRate,
 
       notes: payload.notes ?? null,
+
+      paid_amount: payload.paidAmount ?? 0,
+
+      payment_date: payload.paymentDate ?? null,
     })
     .select()
     .single();
@@ -168,6 +180,12 @@ export async function updateInvoice(
   if (payload.taxRate !== undefined) dbPayload.tax_rate = payload.taxRate;
 
   if (payload.notes !== undefined) dbPayload.notes = payload.notes;
+
+  if (payload.paidAmount !== undefined)
+    dbPayload.paid_amount = payload.paidAmount;
+
+  if (payload.paymentDate !== undefined)
+    dbPayload.payment_date = payload.paymentDate;
 
   const { data, error } = await supabase
     .from("invoices")

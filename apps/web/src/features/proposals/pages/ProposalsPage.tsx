@@ -4,6 +4,7 @@ import PageHeader from "../../../components/common/PageHeader";
 import ProposalForm from "../components/ProposalForm";
 import ProposalCard from "../components/ProposalCard";
 import InvoiceEditor from "../../invoices/components/InvoiceEditor";
+import DeleteConfirmModal from "../../../components/common/DeleteConfirmModal";
 
 import useProposals from "../../../hooks/useProposals";
 import useClients from "../../../hooks/useClients";
@@ -23,10 +24,10 @@ export default function ProposalsPage() {
     proposals,
     isLoading,
     createProposal,
-    updateProposal,
     deleteProposal,
     creating,
     updating,
+    deleting,
   } = useProposals();
 
   const { clients } = useClients();
@@ -43,9 +44,10 @@ export default function ProposalsPage() {
   >();
 
   // Proposal being converted to an invoice
-  const [convertingProposal, setConvertingProposal] = useState<
     Proposal | undefined
   >();
+
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
 
@@ -80,10 +82,17 @@ export default function ProposalsPage() {
     setOpen(true);
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Delete proposal?")) return;
+  function handleDelete(id: string) {
+    setDeletingId(id);
+  }
 
-    await deleteProposal(id);
+  async function confirmDelete() {
+    if (!deletingId) return;
+    try {
+      await deleteProposal(deletingId);
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   function handleConvert(proposal: Proposal) {
@@ -172,6 +181,16 @@ export default function ProposalsPage() {
           )}
           onSubmit={handleInvoiceSubmit}
           onClose={() => setConvertingProposal(undefined)}
+        />
+      )}
+
+      {deletingId && (
+        <DeleteConfirmModal
+          title="Delete Proposal"
+          description="Are you sure you want to delete this proposal? This action cannot be undone."
+          isDeleting={deleting}
+          onConfirm={confirmDelete}
+          onCancel={() => setDeletingId(null)}
         />
       )}
     </div>

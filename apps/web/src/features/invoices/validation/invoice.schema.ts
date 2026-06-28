@@ -25,9 +25,7 @@ export const invoiceSchema = z
     dueDate: z.string().min(1, "Due date is required."),
 
     status: z
-      // Cast required: z.enum() expects a mutable tuple; INVOICE_STATUSES is readonly.
-      // The values are still type-checked — InvoiceStatus is derived from the same source.
-      .enum(INVOICE_STATUSES as unknown as [string, ...string[]])
+      .enum([INVOICE_STATUSES[0], ...INVOICE_STATUSES.slice(1)])
       .default("draft"),
 
     lineItems: z

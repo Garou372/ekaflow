@@ -6,24 +6,36 @@ import type { Client } from "../../../services/client.service";
 
 import ClientCard from "../components/ClientCard";
 import ClientForm from "../components/ClientForm";
+import ClientHistoryModal from "../components/ClientHistoryModal";
+import DeleteConfirmModal from "../../../components/common/DeleteConfirmModal";
 import type { ClientFormData } from "../components/ClientForm";
+
+import useInvoices from "../../../hooks/useInvoices";
+import useProposals from "../../../hooks/useProposals";
 
 export default function ClientsPage() {
   const {
     clients,
     isLoading,
     createClient,
-    updateClient,
     deleteClient,
     creating,
     updating,
+    deleting,
   } = useClients();
+
+  const { invoices } = useInvoices();
+  const { proposals } = useProposals();
 
   const [search, setSearch] = useState("");
 
   const [open, setOpen] = useState(false);
 
   const [editingClient, setEditingClient] = useState<Client | undefined>();
+
+  const [viewingHistoryFor, setViewingHistoryFor] = useState<Client | undefined>();
+
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const filteredClients = useMemo(() => {
     return clients.filter((client) => {
@@ -56,10 +68,17 @@ export default function ClientsPage() {
     setOpen(true);
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Delete this client?")) return;
+  function handleDelete(id: string) {
+    setDeletingId(id);
+  }
 
-    await deleteClient(id);
+  async function confirmDelete() {
+    if (!deletingId) return;
+    try {
+      await deleteClient(deletingId);
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   return (
@@ -106,6 +125,7 @@ export default function ClientsPage() {
               client={client}
               onEdit={handleEdit}
               onDelete={handleDelete}
+              onViewHistory={setViewingHistoryFor}
             />
           ))}
         </div>
@@ -120,6 +140,25 @@ export default function ClientsPage() {
           }}
           onSubmit={handleSubmit}
           isSubmitting={creating || updating}
+        />
+      )}
+
+      {viewingHistoryFor && (
+        <ClientHistoryModal
+          client={viewingHistoryFor}
+          invoices={invoices}
+          proposals={proposals}
+          onClose={() => setViewingHistoryFor(undefined)}
+        />
+      )}
+
+      {deletingId && (
+        <DeleteConfirmModal
+          title="Delete Client"
+          description="Are you sure you want to delete this client? This will remove all their data."
+          isDeleting={deleting}
+          onConfirm={confirmDelete}
+          onCancel={() => setDeletingId(null)}
         />
       )}
     </div>

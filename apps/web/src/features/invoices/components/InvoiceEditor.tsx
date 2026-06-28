@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 
@@ -52,6 +52,7 @@ export default function InvoiceEditor({
 }: Props) {
   const isEditing = !!initialValues;
   const isConverting = !!conversionValues;
+  const [mobileTab, setMobileTab] = useState<"edit" | "preview">("edit");
 
   const {
     register,
@@ -172,9 +173,27 @@ export default function InvoiceEditor({
         </div>
 
         <form onSubmit={handleSubmit(submit)}>
+          {/* Mobile Tab Toggle */}
+          <div className="flex border-b lg:hidden">
+            <button
+              type="button"
+              className={`flex-1 py-3 text-sm font-medium ${mobileTab === "edit" ? "border-b-2 border-indigo-600 text-indigo-600" : "text-gray-500"}`}
+              onClick={() => setMobileTab("edit")}
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              className={`flex-1 py-3 text-sm font-medium ${mobileTab === "preview" ? "border-b-2 border-indigo-600 text-indigo-600" : "text-gray-500"}`}
+              onClick={() => setMobileTab("preview")}
+            >
+              Preview
+            </button>
+          </div>
+
           <div className="grid gap-6 p-6 lg:grid-cols-2">
             {/* ── Left column: form sections ─────────────────────────── */}
-            <div className="space-y-6">
+            <div className={`space-y-6 ${mobileTab === "edit" ? "block" : "hidden"} lg:block`}>
               {/* Details: client, invoice number, dates, status */}
               <InvoiceDetails
                 register={register}
@@ -229,8 +248,8 @@ export default function InvoiceEditor({
             </div>
 
             {/* ── Right column: live preview ──────────────────────────── */}
-            <div className="hidden lg:block">
-              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
+            <div className={`${mobileTab === "preview" ? "block" : "hidden"} lg:block`}>
+              <p className="mb-3 hidden lg:block text-xs font-semibold uppercase tracking-wide text-gray-400">
                 Live Preview
               </p>
 

@@ -6,6 +6,8 @@ import PageHeader from "../../../components/common/PageHeader";
 import InvoiceCard from "../components/InvoiceCard";
 import InvoiceEditor from "../components/InvoiceEditor";
 import InvoicePreview from "../components/InvoicePreview";
+import PaymentModal, { type PaymentFormData } from "../components/PaymentModal";
+import DeleteConfirmModal from "../../../components/common/DeleteConfirmModal";
 
 import useInvoices from "../../../hooks/useInvoices";
 import useClients from "../../../hooks/useClients";
@@ -24,6 +26,7 @@ import { calculateInvoice } from "../utils/calculateInvoice";
 import { getNextInvoiceNumber } from "../utils/invoiceNumber";
 import { printInvoice } from "../utils/print";
 import { exportInvoicePdf } from "../utils/pdf";
+import { isInvoiceOverdue } from "../utils/overdueDetection";
 
 // ─── Status filter labels (UI-only — values come from INVOICE_STATUSES) ───────
 
@@ -103,9 +106,17 @@ export default function InvoicesPage() {
 
   const [open, setOpen] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState<Invoice | undefined>();
-  const [viewingInvoice, setViewingInvoice] = useState<
+  const [viewingInvoiceId, setViewingInvoiceId] = useState<string | null>(null);
+
+  const viewingInvoice = useMemo(() => {
+    return enriched.find((i) => i.id === viewingInvoiceId);
+  }, [enriched, viewingInvoiceId]);
+
+  const [recordingPaymentFor, setRecordingPaymentFor] = useState<
     InvoiceWithRelations | undefined
   >();
+
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Tracks which invoice's status is currently being mutated so the card can
   // show its own loading state without blocking every other card.
@@ -134,6 +145,11 @@ export default function InvoicesPage() {
       ),
     }));
   }, [invoices, clients]);
+
+  // ── Auto-detect overdue invoices that are still marked "sent" ────────────
+  const overdueUnmarked = useMemo(() => {
+    return enriched.filter((inv) => isInvoiceOverdue(inv));
+  }, [enriched]);
 
   // ── Filter by search text and status ─────────────────────────────────────
   const filtered = useMemo(() => {
@@ -168,19 +184,32 @@ export default function InvoicesPage() {
   }, []);
 
   const handleView = useCallback((invoice: InvoiceWithRelations) => {
-    setViewingInvoice(invoice);
+    setViewingInvoiceId(invoice.id);
   }, []);
 
-  const handleDelete = useCallback(
-    async (id: string) => {
-      if (!confirm("Delete this invoice? This cannot be undone.")) return;
-      await deleteInvoice(id);
-    },
-    [deleteInvoice],
-  );
+  const handleDelete = useCallback((id: string) => {
+    setDeletingId(id);
+  }, []);
+
+  const confirmDelete = useCallback(async () => {
+    if (!deletingId) return;
+    try {
+      await deleteInvoice(deletingId);
+    } finally {
+      setDeletingId(null);
+    }
+  }, [deleteInvoice, deletingId]);
 
   const handleStatusChange = useCallback(
     async (id: string, status: InvoiceStatus) => {
+      if (status === "paid") {
+        const invoice = enriched.find((i) => i.id === id);
+        if (invoice) {
+          setRecordingPaymentFor(invoice);
+          return;
+        }
+      }
+
       setUpdatingStatusId(id);
       try {
         await updateStatus({ id, status });
@@ -188,7 +217,29 @@ export default function InvoicesPage() {
         setUpdatingStatusId(null);
       }
     },
-    [updateStatus],
+    [updateStatus, enriched],
+  );
+
+  const handlePaymentSubmit = useCallback(
+    async (data: PaymentFormData) => {
+      if (!recordingPaymentFor) return;
+
+      setUpdatingStatusId(recordingPaymentFor.id);
+      try {
+        await updateInvoice({
+          id: recordingPaymentFor.id,
+          payload: {
+            status: "paid",
+            paidAmount: data.paidAmount,
+            paymentDate: data.paymentDate,
+          },
+        });
+      } finally {
+        setUpdatingStatusId(null);
+        setRecordingPaymentFor(undefined);
+      }
+    },
+    [recordingPaymentFor, updateInvoice],
   );
 
   const closeEditor = useCallback(() => {
@@ -197,8 +248,15 @@ export default function InvoicesPage() {
   }, []);
 
   const closeViewer = useCallback(() => {
-    setViewingInvoice(undefined);
+    setViewingInvoiceId(null);
   }, []);
+
+  const handleSyncOverdue = useCallback(async () => {
+    // Updating them sequentially for simplicity; could use Promise.all
+    for (const inv of overdueUnmarked) {
+      await updateStatus({ id: inv.id, status: "overdue" });
+    }
+  }, [overdueUnmarked, updateStatus]);
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -216,6 +274,30 @@ export default function InvoicesPage() {
           + New Invoice
         </button>
       </PageHeader>
+
+      {/* ── Overdue Banner ─────────────────────────────────────────────── */}
+      {overdueUnmarked.length > 0 && (
+        <div
+          role="alert"
+          className="flex items-center justify-between rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-sm text-orange-800"
+        >
+          <div className="flex items-center gap-2">
+            <strong>Action Required:</strong>
+            <span>
+              {overdueUnmarked.length} invoice(s) are past their due date but still marked as "Sent".
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSyncOverdue}
+            disabled={updating}
+            className="rounded-md bg-orange-600 px-3 py-1.5 font-medium text-white hover:bg-orange-700 disabled:opacity-50"
+          >
+            {updating ? "Updating..." : "Mark as Overdue"}
+          </button>
+        </div>
+      )}
 
       {/* ── Search & status filter ─────────────────────────────────────── */}
       <div className="flex flex-col gap-3 sm:flex-row">
@@ -384,6 +466,27 @@ export default function InvoicesPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Payment modal ──────────────────────────────────────────────── */}
+      {recordingPaymentFor && (
+        <PaymentModal
+          invoice={recordingPaymentFor}
+          isSubmitting={updating}
+          onClose={() => setRecordingPaymentFor(undefined)}
+          onSubmit={handlePaymentSubmit}
+        />
+      )}
+
+      {/* ── Delete confirmation modal ──────────────────────────────────── */}
+      {deletingId && (
+        <DeleteConfirmModal
+          title="Delete Invoice"
+          description="Are you sure you want to delete this invoice? This action cannot be undone."
+          isDeleting={deleting}
+          onConfirm={confirmDelete}
+          onCancel={() => setDeletingId(null)}
+        />
       )}
     </div>
   );
