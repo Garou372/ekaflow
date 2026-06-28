@@ -1,0 +1,58 @@
+import { z } from "zod";
+
+import { INVOICE_STATUSES } from "../types/invoice";
+
+export const invoiceLineItemSchema = z.object({
+  id: z.string().optional(),
+
+  description: z.string().trim().min(1, "Description is required."),
+
+  quantity: z.coerce.number().positive("Quantity must be greater than 0."),
+
+  unitPrice: z.coerce.number().min(0, "Unit price cannot be negative."),
+});
+
+export const invoiceSchema = z
+  .object({
+    clientId: z.string().min(1, "Please select a client."),
+
+    proposalId: z.string().nullish(),
+
+    invoiceNumber: z.string().trim().min(1, "Invoice number is required."),
+
+    issueDate: z.string().min(1, "Issue date is required."),
+
+    dueDate: z.string().min(1, "Due date is required."),
+
+    status: z
+      // Cast required: z.enum() expects a mutable tuple; INVOICE_STATUSES is readonly.
+      // The values are still type-checked — InvoiceStatus is derived from the same source.
+      .enum(INVOICE_STATUSES as unknown as [string, ...string[]])
+      .default("draft"),
+
+    lineItems: z
+      .array(invoiceLineItemSchema)
+      .min(1, "At least one invoice item is required."),
+
+    discountRate: z.coerce
+      .number()
+      .min(0, "Discount cannot be negative.")
+      .max(100, "Discount cannot exceed 100%")
+      .default(0),
+
+    taxRate: z.coerce
+      .number()
+      .min(0, "Tax cannot be negative.")
+      .max(100, "Tax cannot exceed 100%")
+      .default(0),
+
+    notes: z.string().trim().nullish(),
+  })
+  .refine((data) => new Date(data.dueDate) >= new Date(data.issueDate), {
+    message: "Due date cannot be before issue date.",
+    path: ["dueDate"],
+  });
+
+export type InvoiceFormValues = z.infer<typeof invoiceSchema>;
+
+export type InvoiceLineItemFormValues = z.infer<typeof invoiceLineItemSchema>;
