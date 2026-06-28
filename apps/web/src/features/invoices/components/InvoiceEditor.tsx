@@ -6,6 +6,7 @@ import InvoiceDetails from "./InvoiceDetails";
 import InvoiceItems from "./InvoiceItems";
 import InvoiceSummary from "./InvoiceSummary";
 import InvoicePreview from "./InvoicePreview";
+import useAIService from "../../../hooks/useAIService";
 
 import {
   invoiceSchema,
@@ -29,7 +30,7 @@ type Props = {
   initialValues?: Invoice;
   /** Populated when converting an accepted proposal. */
   conversionValues?: CreateInvoiceInput;
-  onSubmit: (data: CreateInvoiceInput) => Promise<void> | void;
+  onSubmit: (data: CreateInvoiceInput, recurring?: { frequency: "weekly" | "monthly" | "yearly" }) => Promise<void> | void;
   onClose: () => void;
 };
 
@@ -53,12 +54,17 @@ export default function InvoiceEditor({
   const isEditing = !!initialValues;
   const isConverting = !!conversionValues;
   const [mobileTab, setMobileTab] = useState<"edit" | "preview">("edit");
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [frequency, setFrequency] = useState<"weekly" | "monthly" | "yearly">("monthly");
+  
+  const { generateText, isGenerating } = useAIService();
 
   const {
     register,
     handleSubmit,
     watch,
     control,
+    setValue,
     formState: { errors },
   } = useForm<InvoiceFormValues>({
     resolver: zodResolver(invoiceSchema),
@@ -126,6 +132,13 @@ export default function InvoiceEditor({
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
+  const handleAIGenerateNotes = async () => {
+    const generated = await generateText("Generate professional invoice notes.");
+    if (generated) {
+      setValue("notes", generated, { shouldDirty: true, shouldValidate: true });
+    }
+  };
+
   async function submit(data: InvoiceFormValues) {
     const input: CreateInvoiceInput = {
       clientId: data.clientId,
@@ -141,7 +154,11 @@ export default function InvoiceEditor({
       notes: data.notes ?? null,
     };
 
-    await onSubmit(input);
+    if (isRecurring) {
+      await onSubmit(input, { frequency });
+    } else {
+      await onSubmit(input);
+    }
   }
 
   return (
@@ -236,10 +253,20 @@ export default function InvoiceEditor({
 
               {/* Notes */}
               <div className="rounded-xl border bg-white p-6 shadow-sm space-y-2">
-                <label htmlFor="invoice-notes" className="text-sm font-medium">
-                  Notes{" "}
-                  <span className="text-gray-400 font-normal">(optional)</span>
-                </label>
+                <div className="flex items-center justify-between">
+                  <label htmlFor="invoice-notes" className="text-sm font-medium">
+                    Notes{" "}
+                    <span className="text-gray-400 font-normal">(optional)</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleAIGenerateNotes}
+                    disabled={isGenerating}
+                    className="text-xs font-medium text-indigo-600 hover:text-indigo-800 disabled:opacity-50 flex items-center gap-1 bg-indigo-50 px-2 py-1 rounded"
+                  >
+                    {isGenerating ? "Generating..." : "✨ AI: Enhance Notes"}
+                  </button>
+                </div>
 
                 <textarea
                   id="invoice-notes"
@@ -249,6 +276,36 @@ export default function InvoiceEditor({
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-indigo-600"
                 />
               </div>
+
+              {/* Recurring Settings */}
+              {!isEditing && (
+                <div className="rounded-xl border bg-white p-6 shadow-sm space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-sm font-semibold">Make Recurring</h2>
+                      <p className="text-xs text-gray-500">Automatically generate this invoice on a schedule.</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" className="sr-only peer" checked={isRecurring} onChange={(e) => setIsRecurring(e.target.checked)} />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                    </label>
+                  </div>
+                  {isRecurring && (
+                    <div>
+                      <label className="text-sm font-medium">Frequency</label>
+                      <select
+                        value={frequency}
+                        onChange={(e) => setFrequency(e.target.value as any)}
+                        className="mt-1 block w-full rounded-lg border border-gray-300 px-3 py-2 outline-none focus:border-indigo-600"
+                      >
+                        <option value="weekly">Weekly</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="yearly">Yearly</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* ── Right column: live preview ──────────────────────────── */}
