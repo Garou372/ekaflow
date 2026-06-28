@@ -66,6 +66,7 @@ export default function InvoiceEditor({
       ? {
           clientId: initialValues.clientId,
           proposalId: initialValues.proposalId,
+          projectId: initialValues.projectId,
           invoiceNumber: initialValues.invoiceNumber,
           issueDate: initialValues.issueDate,
           dueDate: initialValues.dueDate,
@@ -79,6 +80,7 @@ export default function InvoiceEditor({
         ? {
             clientId: conversionValues.clientId,
             proposalId: conversionValues.proposalId ?? null,
+            projectId: conversionValues.projectId ?? null,
             invoiceNumber: conversionValues.invoiceNumber,
             issueDate: conversionValues.issueDate,
             dueDate: conversionValues.dueDate,
@@ -91,6 +93,7 @@ export default function InvoiceEditor({
         : {
             clientId: "",
             proposalId: null,
+            projectId: null,
             invoiceNumber: nextInvoiceNumber,
             issueDate: today(),
             dueDate: "",
@@ -127,6 +130,7 @@ export default function InvoiceEditor({
     const input: CreateInvoiceInput = {
       clientId: data.clientId,
       proposalId: data.proposalId ?? null,
+      projectId: data.projectId ?? null,
       invoiceNumber: data.invoiceNumber,
       issueDate: data.issueDate,
       dueDate: data.dueDate,

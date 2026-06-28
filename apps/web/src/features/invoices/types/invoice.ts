@@ -59,6 +59,8 @@ export interface Invoice {
 
   proposalId: string | null;
 
+  projectId: string | null;
+
   invoiceNumber: string;
 
   issueDate: string;
@@ -88,6 +90,8 @@ export interface CreateInvoiceInput {
   clientId: string;
 
   proposalId?: string | null;
+
+  projectId?: string | null;
 
   invoiceNumber: string;
 

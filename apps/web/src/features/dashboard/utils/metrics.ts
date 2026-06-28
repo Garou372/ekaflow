@@ -1,16 +1,20 @@
 import type { InvoiceWithRelations } from "../../invoices/types/invoice";
 import type { Proposal } from "../../../services/proposal.service";
 import type { Client } from "../../../services/client.service";
+import type { Expense } from "../../expenses/types/expense";
 
-export type MonthlyRevenue = {
+export type MonthlyMetric = {
   month: string;
-  total: number;
+  revenue: number;
+  expenses: number;
+  profit: number;
 };
 
 export function calculateDashboardMetrics(
   invoices: InvoiceWithRelations[],
   proposals: Proposal[],
   clients: Client[],
+  expenses: Expense[] = [],
 ) {
   let totalRevenue = 0;
   let outstanding = 0;
@@ -50,8 +54,13 @@ export function calculateDashboardMetrics(
   const proposalToInvoiceRate =
     invoices.length > 0 ? (invoicesWithProposals / invoices.length) * 100 : 0;
 
+  const totalExpenses = expenses.reduce((acc, curr) => acc + curr.amount, 0);
+  const netProfit = totalRevenue - totalExpenses;
+
   return {
     totalRevenue,
+    totalExpenses,
+    netProfit,
     outstanding,
     overdue,
     draftPipeline,
@@ -63,17 +72,18 @@ export function calculateDashboardMetrics(
   };
 }
 
-export function getMonthlyRevenue(
+export function getMonthlyMetrics(
   invoices: InvoiceWithRelations[],
-): MonthlyRevenue[] {
-  // Aggregate revenue for the last 6 months
-  const monthsMap = new Map<string, number>();
+  expenses: Expense[] = [],
+): MonthlyMetric[] {
+  // Aggregate revenue and expenses for the last 6 months
+  const monthsMap = new Map<string, { revenue: number; expenses: number }>();
 
   const today = new Date();
   for (let i = 5; i >= 0; i--) {
     const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
     const monthKey = d.toLocaleString("default", { month: "short" });
-    monthsMap.set(monthKey, 0);
+    monthsMap.set(monthKey, { revenue: 0, expenses: 0 });
   }
 
   for (const invoice of invoices) {
@@ -82,16 +92,34 @@ export function getMonthlyRevenue(
       const monthKey = d.toLocaleString("default", { month: "short" });
       
       if (monthsMap.has(monthKey)) {
-        monthsMap.set(
-          monthKey,
-          monthsMap.get(monthKey)! + invoice.totals.total,
-        );
+        const curr = monthsMap.get(monthKey)!;
+        monthsMap.set(monthKey, {
+          ...curr,
+          revenue: curr.revenue + invoice.totals.total,
+        });
       }
     }
   }
 
-  return Array.from(monthsMap.entries()).map(([month, total]) => ({
+  for (const expense of expenses) {
+    if (expense.date) {
+      const d = new Date(expense.date);
+      const monthKey = d.toLocaleString("default", { month: "short" });
+      
+      if (monthsMap.has(monthKey)) {
+        const curr = monthsMap.get(monthKey)!;
+        monthsMap.set(monthKey, {
+          ...curr,
+          expenses: curr.expenses + expense.amount,
+        });
+      }
+    }
+  }
+
+  return Array.from(monthsMap.entries()).map(([month, data]) => ({
     month,
-    total,
+    revenue: data.revenue,
+    expenses: data.expenses,
+    profit: data.revenue - data.expenses,
   }));
 }

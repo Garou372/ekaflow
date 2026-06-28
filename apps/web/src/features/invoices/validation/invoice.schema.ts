@@ -14,11 +14,11 @@ export const invoiceLineItemSchema = z.object({
 
 export const invoiceSchema = z
   .object({
-    clientId: z.string().min(1, "Please select a client."),
-
-    proposalId: z.string().nullish(),
-
-    invoiceNumber: z.string().trim().min(1, "Invoice number is required."),
+    id: z.string().uuid().optional(),
+    clientId: z.string().uuid({ message: "Client is required." }),
+    proposalId: z.string().uuid().nullable().optional(),
+    projectId: z.string().uuid().nullable().optional(),
+    invoiceNumber: z.string().min(1, { message: "Invoice number is required." }),
 
     issueDate: z.string().min(1, "Issue date is required."),
 

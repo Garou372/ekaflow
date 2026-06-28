@@ -10,8 +10,9 @@ import RecentActivity from "../components/RecentActivity";
 import useInvoices from "../../../hooks/useInvoices";
 import useProposals from "../../../hooks/useProposals";
 import useClients from "../../../hooks/useClients";
+import useExpenses from "../../../hooks/useExpenses";
 
-import { calculateDashboardMetrics, getMonthlyRevenue } from "../utils/metrics";
+import { calculateDashboardMetrics, getMonthlyMetrics } from "../utils/metrics";
 import { calculateInvoice } from "../../invoices/utils/calculateInvoice";
 import type { InvoiceWithRelations } from "../../invoices/types/invoice";
 import { formatCurrency } from "../../invoices/utils/currency";
@@ -20,8 +21,9 @@ export default function DashboardPage() {
   const { invoices, isLoading: loadingInvoices } = useInvoices();
   const { proposals, isLoading: loadingProposals } = useProposals();
   const { clients, isLoading: loadingClients } = useClients();
+  const { expenses, isLoading: loadingExpenses } = useExpenses();
 
-  const isLoading = loadingInvoices || loadingProposals || loadingClients;
+  const isLoading = loadingInvoices || loadingProposals || loadingClients || loadingExpenses;
 
   const enrichedInvoices = useMemo((): InvoiceWithRelations[] => {
     return invoices.map((invoice) => ({
@@ -38,12 +40,12 @@ export default function DashboardPage() {
   }, [invoices, clients]);
 
   const metrics = useMemo(() => {
-    return calculateDashboardMetrics(enrichedInvoices, proposals, clients);
-  }, [enrichedInvoices, proposals, clients]);
+    return calculateDashboardMetrics(enrichedInvoices, proposals, clients, expenses);
+  }, [enrichedInvoices, proposals, clients, expenses]);
 
-  const monthlyRevenue = useMemo(() => {
-    return getMonthlyRevenue(enrichedInvoices);
-  }, [enrichedInvoices]);
+  const monthlyMetrics = useMemo(() => {
+    return getMonthlyMetrics(enrichedInvoices, expenses);
+  }, [enrichedInvoices, expenses]);
 
   if (isLoading) {
     return (
@@ -66,8 +68,15 @@ export default function DashboardPage() {
           title="Total Revenue"
           value={formatCurrency(metrics.totalRevenue, { minimumFractionDigits: 0 })}
           icon={<DollarSign size={20} />}
+          trend={`${formatCurrency(metrics.totalExpenses, { minimumFractionDigits: 0 })} in expenses`}
+          trendUp={true}
+        />
+        <StatCard
+          title="Net Profit"
+          value={formatCurrency(metrics.netProfit, { minimumFractionDigits: 0 })}
+          icon={<DollarSign size={20} />}
           trend={`${Math.round(metrics.winRate)}% win rate`}
-          trendUp={metrics.winRate >= 50}
+          trendUp={metrics.netProfit > 0}
         />
         <StatCard
           title="Outstanding"
@@ -95,7 +104,7 @@ export default function DashboardPage() {
       {/* Charts & Lists */}
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <RevenueChart data={monthlyRevenue} />
+          <RevenueChart data={monthlyMetrics} />
         </div>
         
         <div className="space-y-6">

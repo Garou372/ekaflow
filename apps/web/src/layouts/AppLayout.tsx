@@ -2,12 +2,16 @@ import { useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import GlobalSearch from "../components/common/GlobalSearch";
+import GlobalTimer from "../components/common/GlobalTimer";
 
 const NAV_LINKS = [
   { to: "/", label: "Dashboard", exact: true },
   { to: "/clients", label: "Clients", exact: false },
+  { to: "/projects", label: "Projects", exact: false },
   { to: "/proposals", label: "Proposals", exact: false },
+  { to: "/time", label: "Time", exact: false },
   { to: "/invoices", label: "Invoices", exact: false },
+  { to: "/expenses", label: "Expenses", exact: false },
   { to: "/settings", label: "Settings", exact: false },
 ] as const;
 
@@ -52,7 +56,8 @@ export default function AppLayout() {
           </nav>
         </div>
 
-        <div className="hidden flex-1 max-w-md md:block ml-8">
+        <div className="hidden md:flex items-center gap-4">
+          <GlobalTimer />
           <GlobalSearch />
         </div>
       </header>
@@ -60,7 +65,8 @@ export default function AppLayout() {
       {/* Mobile Navigation Dropdown */}
       {isMobileMenuOpen && (
         <div className="md:hidden bg-white border-b sticky top-16 z-30">
-          <div className="p-4 border-b">
+          <div className="border-t p-4 md:hidden space-y-4">
+            <GlobalTimer />
             <GlobalSearch />
           </div>
           <nav className="flex flex-col p-2">

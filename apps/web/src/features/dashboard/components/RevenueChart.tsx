@@ -1,8 +1,8 @@
-import type { MonthlyRevenue } from "../utils/metrics";
+import type { MonthlyMetric } from "../utils/metrics";
 import { formatCurrency } from "../../invoices/utils/currency";
 
 type RevenueChartProps = {
-  data: MonthlyRevenue[];
+  data: MonthlyMetric[];
 };
 
 export default function RevenueChart({ data }: RevenueChartProps) {
@@ -14,13 +14,13 @@ export default function RevenueChart({ data }: RevenueChartProps) {
     );
   }
 
-  const maxTotal = Math.max(...data.map((d) => d.total));
+  const maxRevenue = Math.max(...data.map((d) => d.revenue));
   // Provide a minimum scale so small amounts don't fill the whole height
-  const scaleMax = maxTotal > 0 ? maxTotal * 1.1 : 100;
+  const scaleMax = maxRevenue > 0 ? maxRevenue * 1.1 : 100;
 
   return (
     <div className="rounded-xl border bg-white p-6 shadow-sm">
-      <h3 className="mb-6 font-semibold">Revenue (Last 6 Months)</h3>
+      <h3 className="mb-6 font-semibold">Profit & Loss (Last 6 Months)</h3>
 
       <div className="relative h-64 w-full">
         {/* Y-axis labels */}
@@ -40,17 +40,27 @@ export default function RevenueChart({ data }: RevenueChartProps) {
         {/* Chart Bars */}
         <div className="absolute inset-y-0 left-16 right-0 flex items-end justify-between pb-8">
           {data.map((d) => {
-            const heightPercent = (d.total / scaleMax) * 100;
+            const revHeight = (d.revenue / scaleMax) * 100;
+            const expHeight = (d.expenses / scaleMax) * 100;
             return (
-              <div key={d.month} className="group relative flex w-1/6 justify-center">
+              <div key={d.month} className="group relative flex w-1/6 justify-center items-end gap-1">
                 <div
-                  className="w-12 rounded-t-sm bg-indigo-500 transition-all duration-300 group-hover:bg-indigo-600"
-                  style={{ height: `${Math.max(heightPercent, 2)}%` }}
+                  className="w-4 sm:w-6 rounded-t-sm bg-indigo-500 transition-all duration-300 group-hover:bg-indigo-600"
+                  style={{ height: `${Math.max(revHeight, 2)}%` }}
+                ></div>
+                <div
+                  className="w-4 sm:w-6 rounded-t-sm bg-red-400 transition-all duration-300 group-hover:bg-red-500"
+                  style={{ height: `${Math.max(expHeight, 2)}%` }}
                 ></div>
                 
                 {/* Tooltip */}
-                <div className="pointer-events-none absolute -top-10 hidden rounded bg-gray-900 px-2 py-1 text-xs text-white opacity-0 transition-opacity group-hover:block group-hover:opacity-100">
-                  {formatCurrency(d.total)}
+                <div className="pointer-events-none absolute -top-16 hidden rounded bg-gray-900 px-3 py-2 text-xs text-white opacity-0 transition-opacity group-hover:block group-hover:opacity-100 z-10 w-max text-left shadow-lg">
+                  <div className="text-gray-300 mb-1 font-semibold border-b border-gray-700 pb-1">{d.month}</div>
+                  <div>Rev: <span className="text-indigo-300">{formatCurrency(d.revenue)}</span></div>
+                  <div>Exp: <span className="text-red-300">{formatCurrency(d.expenses)}</span></div>
+                  <div className="mt-1 pt-1 font-bold">
+                    Profit: <span className={d.profit >= 0 ? "text-emerald-400" : "text-red-400"}>{formatCurrency(d.profit)}</span>
+                  </div>
                 </div>
               </div>
             );
