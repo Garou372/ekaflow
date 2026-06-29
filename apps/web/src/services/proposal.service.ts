@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabase";
+import { auditService, AUDIT_ACTIONS } from "./audit.service";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -70,6 +71,21 @@ export async function createProposal(payload: CreateProposalPayload) {
     .select()
     .single();
 
+  if (!error && data) {
+    const proposal = data as Proposal;
+    await auditService.log({
+      action: AUDIT_ACTIONS.PROPOSAL_CREATED,
+      entity_type: "proposal",
+      entity_id: proposal.id,
+      metadata: {
+        title: payload.title,
+        client_id: payload.client_id,
+        status: payload.status,
+        total: payload.total,
+      },
+    });
+  }
+
   return { data: data as Proposal | null, error };
 }
 
@@ -84,11 +100,37 @@ export async function updateProposal(
     .select()
     .single();
 
+  if (!error && data) {
+    // Emit a specific status-change event when status transitions
+    const action =
+      payload.status !== undefined
+        ? AUDIT_ACTIONS.PROPOSAL_STATUS_CHANGED
+        : AUDIT_ACTIONS.PROPOSAL_UPDATED;
+
+    await auditService.log({
+      action,
+      entity_type: "proposal",
+      entity_id: id,
+      metadata: {
+        ...(payload.status !== undefined && { status: payload.status }),
+        updated_fields: Object.keys(payload),
+      },
+    });
+  }
+
   return { data: data as Proposal | null, error };
 }
 
 export async function deleteProposal(id: string) {
   const { error } = await supabase.from(TABLE).delete().eq("id", id);
+
+  if (!error) {
+    await auditService.log({
+      action: AUDIT_ACTIONS.PROPOSAL_DELETED,
+      entity_type: "proposal",
+      entity_id: id,
+    });
+  }
 
   return { error };
 }

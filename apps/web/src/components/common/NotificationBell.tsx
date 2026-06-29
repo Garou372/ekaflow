@@ -4,6 +4,25 @@ import { Link } from "react-router-dom";
 import useNotifications from "../../hooks/useNotifications";
 import type { NotificationType } from "../../features/notifications/types/notification";
 
+// ─── Icon map ─────────────────────────────────────────────────────
+
+function getIcon(type: NotificationType) {
+  switch (type) {
+    case "proposal_accepted":
+      return <CheckCircle size={15} style={{ color: "var(--ek-success)" }} />;
+    case "invoice_paid":
+      return <CheckCircle size={15} style={{ color: "var(--ek-primary)" }} />;
+    case "reminder":
+      return <AlertTriangle size={15} style={{ color: "var(--ek-warning)" }} />;
+    case "system":
+      return <Info size={15} style={{ color: "var(--ek-info)" }} />;
+    default:
+      return <FileText size={15} style={{ color: "var(--ek-text-tertiary)" }} />;
+  }
+}
+
+// ─── Component ────────────────────────────────────────────────────
+
 export default function NotificationBell() {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const [isOpen, setIsOpen] = useState(false);
@@ -19,106 +38,181 @@ export default function NotificationBell() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const getIcon = (type: NotificationType) => {
-    switch (type) {
-      case "proposal_accepted":
-        return <CheckCircle size={16} className="text-emerald-500" />;
-      case "invoice_paid":
-        return <CheckCircle size={16} className="text-indigo-500" />;
-      case "reminder":
-        return <AlertTriangle size={16} className="text-amber-500" />;
-      case "system":
-        return <Info size={16} className="text-blue-500" />;
-      default:
-        return <FileText size={16} className="text-gray-500" />;
-    }
-  };
-
-  const handleNotificationClick = (id: string, isRead: boolean) => {
-    if (!isRead) {
-      markAsRead(id);
-    }
+  function handleNotificationClick(id: string, isRead: boolean) {
+    if (!isRead) markAsRead(id);
     setIsOpen(false);
-  };
+  }
 
   return (
     <div className="relative" ref={dropdownRef}>
+      {/* Bell trigger */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 text-gray-500 hover:bg-gray-100 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        className="ek-btn-icon relative"
         aria-label="Notifications"
+        aria-expanded={isOpen}
+        style={{ padding: "8px", borderRadius: 10 }}
       >
-        <Bell size={20} />
+        <Bell size={19} strokeWidth={1.75} />
         {unreadCount > 0 && (
-          <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"></span>
+          <span
+            aria-label={`${unreadCount} unread notifications`}
+            style={{
+              position: "absolute",
+              top: 5,
+              right: 5,
+              width: 7,
+              height: 7,
+              borderRadius: "50%",
+              background: "var(--ek-danger)",
+              border: "2px solid white",
+            }}
+          />
         )}
       </button>
 
+      {/* Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-xl bg-white shadow-xl ring-1 ring-black ring-opacity-5 z-50 overflow-hidden flex flex-col max-h-[80vh]">
-          <div className="flex items-center justify-between border-b px-4 py-3 bg-gray-50">
-            <h3 className="font-semibold text-gray-900">Notifications</h3>
+        <div
+          className="ek-dropdown absolute right-0 mt-2 flex flex-col overflow-hidden"
+          style={{ width: 360, maxHeight: "80vh", zIndex: 60 }}
+        >
+          {/* Header */}
+          <div
+            className="flex items-center justify-between px-4 py-3 shrink-0"
+            style={{
+              borderBottom: "1px solid var(--ek-border)",
+              background: "var(--ek-bg-subtle)",
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <span
+                className="font-semibold"
+                style={{ fontSize: 14, color: "var(--ek-text-primary)" }}
+              >
+                Notifications
+              </span>
+              {unreadCount > 0 && (
+                <span
+                  className="ek-badge"
+                  style={{
+                    background: "var(--ek-primary-100)",
+                    color: "var(--ek-primary)",
+                    fontSize: 11,
+                    padding: "2px 8px",
+                  }}
+                >
+                  {unreadCount}
+                </span>
+              )}
+            </div>
+
             {unreadCount > 0 && (
               <button
                 onClick={() => markAllAsRead()}
-                className="text-xs font-medium text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                className="flex items-center gap-1 text-xs font-semibold transition-colors"
+                style={{ color: "var(--ek-primary)" }}
               >
-                <Check size={14} /> Mark all read
+                <Check size={13} strokeWidth={2.5} />
+                Mark all read
               </button>
             )}
           </div>
 
+          {/* List */}
           <div className="overflow-y-auto flex-1">
             {notifications.length === 0 ? (
-              <div className="px-4 py-8 text-center text-sm text-gray-500">
-                You have no notifications.
+              <div
+                className="flex flex-col items-center justify-center text-center"
+                style={{ padding: "40px 24px", color: "var(--ek-text-tertiary)" }}
+              >
+                <Bell size={28} strokeWidth={1.5} style={{ marginBottom: 8, opacity: 0.5 }} />
+                <p style={{ fontSize: 14, fontWeight: 500 }}>All caught up</p>
+                <p style={{ fontSize: 12, marginTop: 4 }}>No new notifications</p>
               </div>
             ) : (
-              <div className="divide-y divide-gray-100">
-                {notifications.map((notification) => (
-                  <div
-                    key={notification.id}
-                    className={`flex gap-3 px-4 py-3 transition-colors ${
-                      notification.is_read ? "bg-white" : "bg-indigo-50/30"
-                    }`}
-                  >
-                    <div className="mt-0.5 shrink-0">{getIcon(notification.type)}</div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`text-sm font-medium ${notification.is_read ? 'text-gray-900' : 'text-indigo-900'}`}>
-                        {notification.title}
-                      </p>
-                      <p className="mt-0.5 text-sm text-gray-500 line-clamp-2">
-                        {notification.message}
-                      </p>
-                      <p className="mt-1 text-xs text-gray-400">
-                        {new Date(notification.created_at).toLocaleString(undefined, {
-                          month: "short",
-                          day: "numeric",
-                          hour: "numeric",
-                          minute: "2-digit",
-                        })}
-                      </p>
-                      {notification.link_url && (
-                        <Link
-                          to={notification.link_url}
-                          onClick={() => handleNotificationClick(notification.id, notification.is_read)}
-                          className="mt-2 inline-block text-xs font-medium text-indigo-600 hover:text-indigo-800"
-                        >
-                          View Details →
-                        </Link>
-                      )}
-                      {!notification.link_url && !notification.is_read && (
-                        <button
-                          onClick={() => handleNotificationClick(notification.id, notification.is_read)}
-                          className="mt-2 inline-block text-xs font-medium text-gray-500 hover:text-gray-700"
-                        >
-                          Mark read
-                        </button>
-                      )}
-                    </div>
+              notifications.map((notification) => (
+                <div
+                  key={notification.id}
+                  className="flex gap-3 transition-colors"
+                  style={{
+                    padding: "12px 16px",
+                    background: notification.is_read
+                      ? "var(--ek-bg-surface)"
+                      : "var(--ek-primary-50)",
+                    borderBottom: "1px solid var(--ek-border)",
+                    cursor: notification.link_url ? "pointer" : "default",
+                  }}
+                >
+                  {/* Icon */}
+                  <div style={{ marginTop: 2, flexShrink: 0 }}>
+                    {getIcon(notification.type)}
                   </div>
-                ))}
-              </div>
+
+                  {/* Content */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p
+                      className="leading-snug"
+                      style={{
+                        fontSize: 13,
+                        fontWeight: notification.is_read ? 500 : 600,
+                        color: notification.is_read
+                          ? "var(--ek-text-primary)"
+                          : "#1E1B4B",
+                      }}
+                    >
+                      {notification.title}
+                    </p>
+                    <p
+                      className="mt-0.5 line-clamp-2 leading-snug"
+                      style={{ fontSize: 12, color: "var(--ek-text-secondary)" }}
+                    >
+                      {notification.message}
+                    </p>
+                    <p
+                      className="mt-1"
+                      style={{ fontSize: 11, color: "var(--ek-text-tertiary)" }}
+                    >
+                      {new Date(notification.created_at).toLocaleString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}
+                    </p>
+
+                    {notification.link_url ? (
+                      <Link
+                        to={notification.link_url}
+                        onClick={() =>
+                          handleNotificationClick(notification.id, notification.is_read)
+                        }
+                        className="mt-1.5 inline-block font-semibold transition-colors"
+                        style={{ fontSize: 11, color: "var(--ek-primary)" }}
+                      >
+                        View →
+                      </Link>
+                    ) : !notification.is_read ? (
+                      <button
+                        onClick={() =>
+                          handleNotificationClick(notification.id, notification.is_read)
+                        }
+                        className="mt-1.5 inline-block font-medium transition-colors"
+                        style={{
+                          fontSize: 11,
+                          color: "var(--ek-text-tertiary)",
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          padding: 0,
+                        }}
+                      >
+                        Mark read
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </div>

@@ -1,12 +1,16 @@
 import { useMemo, useState } from "react";
+import { FileText, Plus, Search } from "lucide-react";
 
 import PageHeader from "../../../components/common/PageHeader";
 import ProposalForm from "../components/ProposalForm";
 import ProposalCard from "../components/ProposalCard";
 import InvoiceEditor from "../../invoices/components/InvoiceEditor";
 import DeleteConfirmModal from "../../../components/common/DeleteConfirmModal";
+import EmptyState from "../../../components/common/EmptyState";
+import LoadingPage from "../../../components/common/LoadingPage";
 
 import useProposals from "../../../hooks/useProposals";
+
 import useClients from "../../../hooks/useClients";
 import useInvoices from "../../../hooks/useInvoices";
 
@@ -108,35 +112,56 @@ export default function ProposalsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Proposals" description="Create and manage proposals.">
+      <PageHeader title="Proposals" description="Create and manage client proposals.">
         <button
           onClick={() => {
             setEditingProposal(undefined);
             setOpen(true);
           }}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
+          className="ek-btn ek-btn-primary ek-btn-md"
         >
-          + New Proposal
+          <Plus size={16} />
+          New Proposal
         </button>
       </PageHeader>
 
-      <input
-        placeholder="Search proposal..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="w-full rounded-lg border px-4 py-2"
-      />
+      {/* Search bar */}
+      <div className="ek-search-wrap" style={{ maxWidth: 380 }}>
+        <Search size={16} />
+        <input
+          type="search"
+          placeholder="Search proposals…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="ek-search-input"
+        />
+      </div>
 
       {isLoading ? (
-        <div className="py-10 text-center">Loading...</div>
+        <LoadingPage />
       ) : filtered.length === 0 ? (
-        <div className="rounded-xl border border-dashed p-10 text-center">
-          <h2 className="text-xl font-semibold">No Proposals</h2>
-
-          <p className="mt-2 text-gray-500">Create your first proposal.</p>
-        </div>
+        <EmptyState
+          icon={<FileText size={28} />}
+          title={search ? "No proposals found" : "No proposals yet"}
+          description={
+            search
+              ? `No proposals match "${search}". Try a different search.`
+              : "Create your first proposal to send to a client."
+          }
+          action={
+            !search ? (
+              <button
+                onClick={() => { setEditingProposal(undefined); setOpen(true); }}
+                className="ek-btn ek-btn-primary ek-btn-md"
+              >
+                <Plus size={15} />
+                Create First Proposal
+              </button>
+            ) : undefined
+          }
+        />
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {filtered.map((proposal) => (
             <ProposalCard
               key={proposal.id}

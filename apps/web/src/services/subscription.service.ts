@@ -1,9 +1,19 @@
 import { supabase } from "../lib/supabase";
+import {
+  incrementUsageMetric,
+  getUsageMetrics,
+  type MetricType,
+} from "./usage.service";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type SubscriptionPlan = "starter" | "professional" | "business";
-export type SubscriptionStatus = "trialing" | "active" | "past_due" | "canceled" | "paused";
+export type SubscriptionStatus =
+  | "trialing"
+  | "active"
+  | "past_due"
+  | "canceled"
+  | "paused";
 
 export interface Subscription {
   id: string;
@@ -26,13 +36,13 @@ export interface Subscription {
 export interface PlanLimits {
   name: string;
   price_monthly: number; // INR
-  clients: number;         // -1 = unlimited
-  projects: number;        // -1 = unlimited
+  clients: number; // -1 = unlimited
+  projects: number; // -1 = unlimited
   invoices_per_month: number; // -1 = unlimited
   proposals_per_month: number;
   ai_queries_per_month: number;
-  storage_bytes: number;    // -1 = unlimited
-  team_members: number;    // -1 = unlimited
+  storage_bytes: number; // -1 = unlimited
+  team_members: number; // -1 = unlimited
   client_portal: boolean;
   automation: boolean;
   advanced_reports: boolean;
@@ -110,10 +120,11 @@ export interface LimitCheckResult {
 // ─── Service ──────────────────────────────────────────────────────────────────
 
 const TABLE = "subscriptions";
-const USAGE_TABLE = "usage_metrics";
 
 export async function getSubscription(): Promise<Subscription | null> {
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return null;
 
   const { data, error } = await supabase
@@ -129,19 +140,29 @@ export async function getSubscription(): Promise<Subscription | null> {
 
   // Auto-create starter subscription if none exists
   if (!data) {
-    const { data: created } = await supabase
+    const { data: created, error: createError } = await supabase
       .from(TABLE)
       .insert({ user_id: user.id, plan: "starter", status: "trialing" })
       .select()
       .single();
+
+    if (createError) {
+      console.error("[Subscription] auto-provision error:", createError);
+      return null;
+    }
+
     return created as Subscription | null;
   }
 
   return data as Subscription;
 }
 
-export async function updateSubscriptionPlan(plan: SubscriptionPlan): Promise<{ error: Error | null }> {
-  const { data: { user } } = await supabase.auth.getUser();
+export async function updateSubscriptionPlan(
+  plan: SubscriptionPlan,
+): Promise<{ error: Error | null }> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return { error: new Error("Not authenticated") };
 
   const { error } = await supabase
@@ -152,45 +173,38 @@ export async function updateSubscriptionPlan(plan: SubscriptionPlan): Promise<{ 
   return { error: error as Error | null };
 }
 
+/**
+ * Get this month's usage count for a metric.
+ *
+ * Delegates to usage.service.ts, which owns reads/writes against the
+ * usage_metrics table, so there is one consistent code path instead of
+ * a second, parallel implementation here.
+ */
 export async function getUsageThisMonth(metricType: string): Promise<number> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return 0;
-
-  const periodMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
-
-  const { data } = await supabase
-    .from(USAGE_TABLE)
-    .select("count")
-    .eq("user_id", user.id)
-    .eq("metric_type", metricType)
-    .eq("period_month", periodMonth)
-    .single();
-
-  return (data as { count: number } | null)?.count ?? 0;
+  const metrics = await getUsageMetrics();
+  return metrics.find((m) => m.metric_type === metricType)?.count ?? 0;
 }
 
-export async function incrementUsage(metricType: string, by = 1): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
-
-  const periodMonth = new Date().toISOString().slice(0, 7);
-
-  // Upsert: insert if not exists, add to count if exists
-  await supabase.rpc("increment_usage_metric", {
-    p_user_id: user.id,
-    p_metric_type: metricType,
-    p_period_month: periodMonth,
-    p_increment: by,
-  }).then(({ error }) => {
-    if (error) {
-      // Fallback: manual upsert if RPC not available
-      console.warn("[Usage] RPC failed, using manual upsert:", error.message);
-    }
-  });
+/**
+ * Increment this month's usage count for a metric.
+ *
+ * Previously this called a Postgres RPC ("increment_usage_metric") that
+ * does not exist in the schema; on failure it only logged a warning and
+ * never actually recorded the usage. It now delegates to the
+ * fetch-then-upsert implementation in usage.service.ts, which is the
+ * single source of truth for usage_metrics writes.
+ */
+export async function incrementUsage(
+  metricType: string,
+  by = 1,
+): Promise<void> {
+  await incrementUsageMetric(metricType as MetricType, by);
 }
 
 export async function getBillingHistory() {
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return { data: [], error: null };
 
   return supabase
@@ -220,7 +234,8 @@ export function checkLimit(
     return { allowed: false, reason: "No active subscription found." };
   }
 
-  const isActive = subscription.status === "active" || subscription.status === "trialing";
+  const isActive =
+    subscription.status === "active" || subscription.status === "trialing";
   if (!isActive) {
     return {
       allowed: false,
@@ -240,7 +255,8 @@ export function checkLimit(
           reason: `You've reached the ${limits.clients} client limit on the ${limits.name} plan.`,
           limit: limits.clients,
           current,
-          upgradeRequired: subscription.plan === "starter" ? "professional" : "business",
+          upgradeRequired:
+            subscription.plan === "starter" ? "professional" : "business",
         };
       }
       return { allowed: true };
@@ -255,7 +271,8 @@ export function checkLimit(
           reason: `You've reached the ${limits.projects} project limit on the ${limits.name} plan.`,
           limit: limits.projects,
           current,
-          upgradeRequired: subscription.plan === "starter" ? "professional" : "business",
+          upgradeRequired:
+            subscription.plan === "starter" ? "professional" : "business",
         };
       }
       return { allowed: true };
@@ -270,7 +287,8 @@ export function checkLimit(
           reason: `You've created ${current} invoices this month. The ${limits.name} plan allows ${limits.invoices_per_month}/month.`,
           limit: limits.invoices_per_month,
           current,
-          upgradeRequired: subscription.plan === "starter" ? "professional" : "business",
+          upgradeRequired:
+            subscription.plan === "starter" ? "professional" : "business",
         };
       }
       return { allowed: true };
@@ -285,7 +303,8 @@ export function checkLimit(
           reason: `You've created ${current} proposals this month. The ${limits.name} plan allows ${limits.proposals_per_month}/month.`,
           limit: limits.proposals_per_month,
           current,
-          upgradeRequired: subscription.plan === "starter" ? "professional" : "business",
+          upgradeRequired:
+            subscription.plan === "starter" ? "professional" : "business",
         };
       }
       return { allowed: true };
@@ -300,7 +319,8 @@ export function checkLimit(
           reason: `You've used ${current} AI queries this month. The ${limits.name} plan includes ${limits.ai_queries_per_month}/month.`,
           limit: limits.ai_queries_per_month,
           current,
-          upgradeRequired: subscription.plan === "starter" ? "professional" : "business",
+          upgradeRequired:
+            subscription.plan === "starter" ? "professional" : "business",
         };
       }
       return { allowed: true };
@@ -326,7 +346,8 @@ export function checkLimit(
         return {
           allowed: false,
           reason: `Client Portal is not available on the ${limits.name} plan.`,
-          upgradeRequired: subscription.plan === "starter" ? "professional" : "business",
+          upgradeRequired:
+            subscription.plan === "starter" ? "professional" : "business",
         };
       }
       return { allowed: true };

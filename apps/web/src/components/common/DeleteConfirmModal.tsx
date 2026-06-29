@@ -1,5 +1,7 @@
 import { useEffect } from "react";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, X } from "lucide-react";
+
+// ─── Types ────────────────────────────────────────────────────────
 
 type DeleteConfirmModalProps = {
   title: string;
@@ -9,6 +11,8 @@ type DeleteConfirmModalProps = {
   onCancel: () => void;
 };
 
+// ─── Component ────────────────────────────────────────────────────
+
 export default function DeleteConfirmModal({
   title,
   description,
@@ -16,51 +20,107 @@ export default function DeleteConfirmModal({
   onConfirm,
   onCancel,
 }: DeleteConfirmModalProps) {
+  // Keyboard: Escape to cancel
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") onCancel();
+      if (e.key === "Escape" && !isDeleting) onCancel();
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onCancel]);
+  }, [onCancel, isDeleting]);
 
   return (
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
-      onClick={onCancel}
+      aria-labelledby="delete-modal-title"
+      className="ek-overlay"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isDeleting) onCancel();
+      }}
     >
-      <div
-        className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600">
-            <AlertTriangle size={24} />
+      <div className="ek-modal" style={{ maxWidth: 420 }}>
+        {/* Header */}
+        <div
+          className="flex items-start justify-between p-6"
+          style={{ borderBottom: "1px solid var(--ek-border)" }}
+        >
+          <div className="flex items-center gap-4">
+            {/* Icon */}
+            <div
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"
+              style={{ background: "var(--ek-danger-bg)" }}
+            >
+              <AlertTriangle
+                size={22}
+                strokeWidth={2}
+                style={{ color: "var(--ek-danger)" }}
+              />
+            </div>
+
+            {/* Title */}
+            <div>
+              <h3
+                id="delete-modal-title"
+                className="font-bold"
+                style={{ fontSize: 17, color: "var(--ek-text-primary)" }}
+              >
+                {title}
+              </h3>
+            </div>
           </div>
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-            <p className="mt-1 text-sm text-gray-500">{description}</p>
-          </div>
+
+          {/* Close button */}
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isDeleting}
+            className="ek-btn-icon"
+            aria-label="Close"
+          >
+            <X size={18} />
+          </button>
         </div>
 
-        <div className="mt-6 flex justify-end gap-3">
+        {/* Body */}
+        <div className="px-6 py-5">
+          <p
+            className="text-sm leading-relaxed"
+            style={{ color: "var(--ek-text-secondary)" }}
+          >
+            {description}
+          </p>
+        </div>
+
+        {/* Footer */}
+        <div
+          className="flex items-center justify-end gap-3 px-6 pb-6"
+        >
           <button
             type="button"
             disabled={isDeleting}
             onClick={onCancel}
-            className="rounded-lg border px-4 py-2 text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
+            className="ek-btn ek-btn-secondary ek-btn-md"
           >
             Cancel
           </button>
+
           <button
             type="button"
             disabled={isDeleting}
             onClick={onConfirm}
-            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+            className="ek-btn ek-btn-danger ek-btn-md"
           >
-            {isDeleting ? "Deleting..." : "Delete"}
+            {isDeleting ? (
+              <span className="flex items-center gap-2">
+                <span
+                  className="inline-block h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-ek-spin"
+                />
+                Deleting…
+              </span>
+            ) : (
+              "Delete"
+            )}
           </button>
         </div>
       </div>

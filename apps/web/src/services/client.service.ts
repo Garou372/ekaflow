@@ -1,4 +1,5 @@
 import { supabase } from "../lib/supabase";
+import { auditService, AUDIT_ACTIONS } from "./audit.service";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -15,7 +16,6 @@ export type Client = {
   gst_number?: string;
   address?: string;
   notes?: string;
-  // CRM fields (Sprint 10)
   priority?: ClientPriority;
   tags?: string[];
   last_contacted_at?: string;
@@ -56,7 +56,9 @@ export async function getClients() {
   return { data, error };
 }
 
-export async function createClient(payload: Omit<Client, "id" | "created_at" | "updated_at">) {
+export async function createClient(
+  payload: Omit<Client, "id" | "created_at" | "updated_at">,
+) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -66,6 +68,15 @@ export async function createClient(payload: Omit<Client, "id" | "created_at" | "
     .insert({ ...payload, user_id: user?.id })
     .select()
     .single();
+
+  if (!error && data) {
+    await auditService.log({
+      action: AUDIT_ACTIONS.CLIENT_CREATED,
+      entity_type: "client",
+      entity_id: (data as Client).id,
+      metadata: { name: payload.name, email: payload.email },
+    });
+  }
 
   return { data, error };
 }
@@ -78,11 +89,29 @@ export async function updateClient(id: string, payload: Partial<Client>) {
     .select()
     .single();
 
+  if (!error && data) {
+    await auditService.log({
+      action: AUDIT_ACTIONS.CLIENT_UPDATED,
+      entity_type: "client",
+      entity_id: id,
+      metadata: { updated_fields: Object.keys(payload) },
+    });
+  }
+
   return { data, error };
 }
 
 export async function deleteClient(id: string) {
   const { error } = await supabase.from(TABLE).delete().eq("id", id);
+
+  if (!error) {
+    await auditService.log({
+      action: AUDIT_ACTIONS.CLIENT_DELETED,
+      entity_type: "client",
+      entity_id: id,
+    });
+  }
+
   return { error };
 }
 

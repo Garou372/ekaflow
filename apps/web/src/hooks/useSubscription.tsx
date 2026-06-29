@@ -11,6 +11,7 @@ import {
   type LimitedAction,
   type LimitCheckResult,
 } from "../services/subscription.service";
+import { getUsageMetrics } from "../services/usage.service";
 import useClients from "./useClients";
 import useProjects from "./useProjects";
 import useInvoices from "./useInvoices";
@@ -26,13 +27,15 @@ interface SubscriptionContextValue {
   isTrialing: boolean;
   isActive: boolean;
   daysLeftInTrial: number;
-  planLimits: typeof PLAN_LIMITS[SubscriptionPlan];
+  planLimits: (typeof PLAN_LIMITS)[SubscriptionPlan];
   canPerform: (action: LimitedAction) => LimitCheckResult;
   upgradePlan: (plan: SubscriptionPlan) => Promise<void>;
   upgrading: boolean;
 }
 
-const SubscriptionContext = createContext<SubscriptionContextValue | null>(null);
+const SubscriptionContext = createContext<SubscriptionContextValue | null>(
+  null,
+);
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
@@ -44,6 +47,14 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     queryKey: ["subscription"],
     queryFn: getSubscription,
     staleTime: 1000 * 60 * 10, // 10 minutes
+  });
+
+  // Real usage counters (e.g. AI queries) for the current month, used to
+  // enforce plan limits instead of assuming zero usage.
+  const { data: usageMetrics } = useQuery({
+    queryKey: ["usage-metrics"],
+    queryFn: getUsageMetrics,
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   // Pull current counts for limit checking
@@ -95,13 +106,16 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
     (p) => new Date(p.created_at) >= currentMonthStart,
   ).length;
 
+  const aiQueriesThisMonth =
+    usageMetrics?.find((m) => m.metric_type === "ai_query")?.count ?? 0;
+
   function canPerform(action: LimitedAction): LimitCheckResult {
     return checkLimit(subscription ?? null, action, {
       clients: clients.length,
       projects: projects.length,
       invoicesThisMonth,
       proposalsThisMonth,
-      aiQueriesThisMonth: 0, // tracked separately via usage_metrics
+      aiQueriesThisMonth,
       teamMembers: 1, // default; updated by team hook
     });
   }
@@ -132,9 +146,7 @@ export function SubscriptionProvider({ children }: { children: ReactNode }) {
 export function useSubscription(): SubscriptionContextValue {
   const ctx = useContext(SubscriptionContext);
   if (!ctx) {
-    throw new Error(
-      "useSubscription must be used inside SubscriptionProvider",
-    );
+    throw new Error("useSubscription must be used inside SubscriptionProvider");
   }
   return ctx;
 }

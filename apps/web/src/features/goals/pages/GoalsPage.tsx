@@ -52,26 +52,23 @@ function GoalForm({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-md rounded-xl bg-white shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between border-b p-5">
-          <h2 className="text-lg font-semibold">Set New Goal</h2>
-          <button onClick={onClose} className="rounded-md p-1.5 hover:bg-gray-100">✕</button>
+    <div className="ek-overlay" onClick={onClose}>
+      <div className="ek-modal" style={{ maxWidth: 460 }} onClick={(e) => e.stopPropagation()}>
+        <div
+          className="flex items-center justify-between px-6 py-5"
+          style={{ borderBottom: "1px solid var(--ek-border)" }}
+        >
+          <h2 className="font-bold" style={{ fontSize: 17, color: "var(--ek-text-primary)" }}>Set New Goal</h2>
+          <button onClick={onClose} className="ek-btn-icon" aria-label="Close">✕</button>
         </div>
-        <div className="space-y-4 p-5">
+        <div className="space-y-4 p-6">
           <div>
-            <label className="mb-1 block text-sm font-medium">Goal Title</label>
+            <label className="ek-label">Goal title</label>
             <input
               value={form.title}
               onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
               placeholder="e.g. ₹1L monthly revenue"
-              className="w-full rounded-lg border px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="ek-input mt-1"
             />
           </div>
 
@@ -96,14 +93,14 @@ function GoalForm({
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium">Target Amount (₹)</label>
+            <label className="ek-label">Target amount (₹)</label>
             <input
               type="number"
               min="0"
               value={form.target_amount}
               onChange={(e) => setForm((f) => ({ ...f, target_amount: e.target.value }))}
               placeholder="100000"
-              className="w-full rounded-lg border px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="ek-input mt-1"
             />
           </div>
 
@@ -139,16 +136,17 @@ function GoalForm({
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 border-t bg-gray-50 p-4">
-          <button onClick={onClose} className="rounded-lg border px-4 py-2 text-sm">
-            Cancel
-          </button>
+        <div
+          className="flex justify-end gap-3 px-6 pb-6"
+          style={{ borderTop: "1px solid var(--ek-border)", paddingTop: 16 }}
+        >
+          <button onClick={onClose} className="ek-btn ek-btn-secondary ek-btn-md">Cancel</button>
           <button
             disabled={isSubmitting || !form.title || !form.target_amount}
             onClick={() => onSubmit(form)}
-            className="rounded-lg bg-indigo-600 px-5 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+            className="ek-btn ek-btn-primary ek-btn-md"
           >
-            {isSubmitting ? "Saving..." : "Set Goal"}
+            {isSubmitting ? "Saving…" : "Set Goal"}
           </button>
         </div>
       </div>
@@ -188,37 +186,43 @@ function GoalCard({
 
   return (
     <div
-      className={`rounded-xl border bg-white p-5 shadow-sm transition-all ${
-        isComplete ? "border-emerald-200 bg-emerald-50/30" : "border-gray-200"
-      }`}
+      className="ek-card ek-card-hover p-5"
+      style={isComplete ? { borderColor: "#BBF7D0", background: "#F0FDF4" } : undefined}
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           {isComplete ? (
-            <CheckCircle size={18} className="text-emerald-500 shrink-0" />
+            <CheckCircle size={17} style={{ color: "var(--ek-success)", flexShrink: 0 }} />
           ) : (
-            <Target size={18} className="text-indigo-500 shrink-0" />
+            <Target size={17} style={{ color: "var(--ek-primary)", flexShrink: 0 }} />
           )}
-          <h3 className="font-semibold text-gray-900">{goal.title}</h3>
+          <h3 className="font-bold truncate" style={{ fontSize: 15, color: "var(--ek-text-primary)" }}>
+            {goal.title}
+          </h3>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <span
-            className={`rounded-full px-2 py-0.5 text-xs font-medium capitalize ${
-              goal.goal_type === "yearly"
-                ? "bg-purple-100 text-purple-700"
-                : goal.goal_type === "quarterly"
-                  ? "bg-blue-100 text-blue-700"
-                  : "bg-indigo-100 text-indigo-700"
-            }`}
+            className="ek-badge capitalize"
+            style={{
+              background:
+                goal.goal_type === "yearly" ? "#F5F3FF" :
+                goal.goal_type === "quarterly" ? "#EFF6FF" : "var(--ek-primary-50)",
+              color:
+                goal.goal_type === "yearly" ? "#7C3AED" :
+                goal.goal_type === "quarterly" ? "#2563EB" : "var(--ek-primary)",
+              fontSize: 11, padding: "2px 10px",
+            }}
           >
             {goal.goal_type}
           </span>
           <button
             onClick={onDelete}
-            className="rounded-md p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+            className="ek-btn-icon"
+            aria-label="Delete goal"
+            style={{ color: "var(--ek-danger)" }}
           >
-            <Trash2 size={14} />
+            <Trash2 size={13} />
           </button>
         </div>
       </div>

@@ -1,10 +1,15 @@
 import { supabase } from "../lib/supabase";
-import { auditService } from "./audit.service";
+import { auditService, AUDIT_ACTIONS } from "./audit.service";
 
 import type {
   CreateInvoiceInput,
   Invoice,
+  InvoiceStatus,
 } from "../features/invoices/types/invoice";
+
+import { STATUS_TRANSITIONS } from "../features/invoices/types/invoice";
+
+// ─── Internal row type ────────────────────────────────────────────────────────
 
 type InvoiceRow = {
   id: string;
@@ -12,71 +17,50 @@ type InvoiceRow = {
   client_id: string;
   project_id: string | null;
   proposal_id: string | null;
-
   invoice_number: string;
-
   issue_date: string;
   due_date: string;
-
   status: Invoice["status"];
-
   line_items: {
     id?: string;
     description: string;
     quantity: number;
     unit_price: number;
   }[];
-
   discount_rate: number | null;
   tax_rate: number | null;
-
   notes: string | null;
-
   paid_amount: number | null;
-
   payment_date: string | null;
-
   created_at: string;
   updated_at: string;
 };
 
+// ─── Mappers ──────────────────────────────────────────────────────────────────
+
 function mapInvoice(row: InvoiceRow): Invoice {
   return {
     id: row.id,
-
     userId: row.user_id,
-
     clientId: row.client_id,
     projectId: row.project_id,
     proposalId: row.proposal_id,
-
     invoiceNumber: row.invoice_number,
-
     issueDate: row.issue_date,
-
     dueDate: row.due_date,
-
     status: row.status,
-
     lineItems: (row.line_items ?? []).map((item) => ({
       id: item.id,
       description: item.description,
       quantity: item.quantity,
       unitPrice: item.unit_price,
     })),
-
     discountRate: row.discount_rate ?? 0,
-
     taxRate: row.tax_rate ?? 0,
-
     notes: row.notes,
-
     paidAmount: row.paid_amount ?? 0,
-
     paymentDate: row.payment_date,
-
     createdAt: row.created_at,
-
     updatedAt: row.updated_at,
   };
 }
@@ -89,13 +73,30 @@ function mapLineItems(items: CreateInvoiceInput["lineItems"]) {
   }));
 }
 
+// ─── Status transition guard ──────────────────────────────────────────────────
+
+/**
+ * Returns an error string if `nextStatus` is not a valid transition from
+ * `currentStatus`, or null if the transition is allowed.
+ */
+function validateStatusTransition(
+  currentStatus: InvoiceStatus,
+  nextStatus: InvoiceStatus,
+): string | null {
+  const allowed = STATUS_TRANSITIONS[currentStatus];
+  if (!allowed.includes(nextStatus)) {
+    return `Cannot transition invoice from "${currentStatus}" to "${nextStatus}". Allowed: ${allowed.length ? allowed.join(", ") : "none (terminal state)"}.`;
+  }
+  return null;
+}
+
+// ─── Service functions ────────────────────────────────────────────────────────
+
 export async function getInvoices() {
   const { data, error } = await supabase
     .from("invoices")
     .select("*")
-    .order("created_at", {
-      ascending: false,
-    });
+    .order("created_at", { ascending: false });
 
   return {
     data: ((data as InvoiceRow[] | null) ?? []).map(mapInvoice),
@@ -123,25 +124,15 @@ export async function createInvoice(payload: CreateInvoiceInput) {
       client_id: payload.clientId,
       project_id: payload.projectId ?? null,
       proposal_id: payload.proposalId ?? null,
-
       invoice_number: payload.invoiceNumber,
-
       issue_date: payload.issueDate,
-
       due_date: payload.dueDate,
-
       status: payload.status ?? "draft",
-
       line_items: mapLineItems(payload.lineItems),
-
       discount_rate: payload.discountRate,
-
       tax_rate: payload.taxRate,
-
       notes: payload.notes ?? null,
-
       paid_amount: payload.paidAmount ?? 0,
-
       payment_date: payload.paymentDate ?? null,
     })
     .select()
@@ -149,7 +140,7 @@ export async function createInvoice(payload: CreateInvoiceInput) {
 
   if (!error && data) {
     await auditService.log({
-      action: "invoice.created",
+      action: AUDIT_ACTIONS.INVOICE_CREATED,
       entity_type: "invoice",
       entity_id: data.id,
       metadata: { invoiceNumber: payload.invoiceNumber },
@@ -166,34 +157,45 @@ export async function updateInvoice(
   id: string,
   payload: Partial<CreateInvoiceInput>,
 ) {
-  const dbPayload: Record<string, unknown> = {};
+  // If a status change is requested, validate the transition first
+  if (payload.status !== undefined) {
+    const { data: existing, error: fetchError } = await getInvoice(id);
 
+    if (fetchError || !existing) {
+      return {
+        data: null,
+        error: fetchError ?? new Error(`Invoice "${id}" not found.`),
+      };
+    }
+
+    const transitionError = validateStatusTransition(
+      existing.status,
+      payload.status,
+    );
+
+    if (transitionError) {
+      return { data: null, error: new Error(transitionError) };
+    }
+  }
+
+  const dbPayload: Record<string, unknown> = {};
   if (payload.clientId !== undefined) dbPayload.client_id = payload.clientId;
   if (payload.projectId !== undefined) dbPayload.project_id = payload.projectId;
-  if (payload.proposalId !== undefined) dbPayload.proposal_id = payload.proposalId;
-
+  if (payload.proposalId !== undefined)
+    dbPayload.proposal_id = payload.proposalId;
   if (payload.invoiceNumber !== undefined)
     dbPayload.invoice_number = payload.invoiceNumber;
-
   if (payload.issueDate !== undefined) dbPayload.issue_date = payload.issueDate;
-
   if (payload.dueDate !== undefined) dbPayload.due_date = payload.dueDate;
-
   if (payload.status !== undefined) dbPayload.status = payload.status;
-
   if (payload.lineItems !== undefined)
     dbPayload.line_items = mapLineItems(payload.lineItems);
-
   if (payload.discountRate !== undefined)
     dbPayload.discount_rate = payload.discountRate;
-
   if (payload.taxRate !== undefined) dbPayload.tax_rate = payload.taxRate;
-
   if (payload.notes !== undefined) dbPayload.notes = payload.notes;
-
   if (payload.paidAmount !== undefined)
     dbPayload.paid_amount = payload.paidAmount;
-
   if (payload.paymentDate !== undefined)
     dbPayload.payment_date = payload.paymentDate;
 
@@ -205,11 +207,19 @@ export async function updateInvoice(
     .single();
 
   if (!error && data) {
+    const action =
+      payload.status !== undefined
+        ? AUDIT_ACTIONS.INVOICE_STATUS_CHANGED
+        : AUDIT_ACTIONS.INVOICE_UPDATED;
+
     await auditService.log({
-      action: "invoice.updated",
+      action,
       entity_type: "invoice",
       entity_id: id,
-      metadata: { status: payload.status },
+      metadata: {
+        ...(payload.status !== undefined && { status: payload.status }),
+        updated_fields: Object.keys(payload),
+      },
     });
   }
 
@@ -219,12 +229,24 @@ export async function updateInvoice(
   };
 }
 
+/**
+ * Dedicated status-change entry point used by `useInvoices.updateStatus`.
+ * Fetches current status, validates transition, then delegates to updateInvoice.
+ * Returns a typed error instead of throwing so callers follow { data, error } pattern.
+ */
+export async function updateInvoiceStatus(
+  id: string,
+  nextStatus: InvoiceStatus,
+) {
+  return updateInvoice(id, { status: nextStatus });
+}
+
 export async function deleteInvoice(id: string) {
   const { error } = await supabase.from("invoices").delete().eq("id", id);
 
   if (!error) {
     await auditService.log({
-      action: "invoice.deleted",
+      action: AUDIT_ACTIONS.INVOICE_DELETED,
       entity_type: "invoice",
       entity_id: id,
     });

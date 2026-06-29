@@ -1,38 +1,46 @@
-import { Star, Phone, Mail, Calendar, Clock, Tag, TrendingUp, AlertCircle } from "lucide-react";
+import {
+  Star, Phone, Mail, Calendar, Clock, Tag,
+  TrendingUp, AlertCircle, History,
+  Pencil, Trash2,
+} from "lucide-react";
 import type { Client, ClientPriority } from "../../../services/client.service";
 import type { Invoice } from "../../invoices/types/invoice";
 import { formatCurrency } from "../../invoices/utils/currency";
 import { calculateInvoice } from "../../invoices/utils/calculateInvoice";
 
-// ─── Priority Config ───────────────────────────────────────────────────────────
+// ─── Priority config ──────────────────────────────────────────────
 
 const PRIORITY_CONFIG: Record<
   ClientPriority,
-  { label: string; color: string; dot: string }
+  { label: string; bg: string; text: string; dot: string }
 > = {
   vip: {
     label: "VIP",
-    color: "text-amber-600 bg-amber-50 border-amber-200",
-    dot: "bg-amber-400",
+    bg: "#FFFBEB",
+    text: "#D97706",
+    dot: "#FBBF24",
   },
   high: {
     label: "High",
-    color: "text-indigo-600 bg-indigo-50 border-indigo-200",
-    dot: "bg-indigo-400",
+    bg: "var(--ek-primary-50)",
+    text: "var(--ek-primary)",
+    dot: "var(--ek-primary)",
   },
   normal: {
     label: "Normal",
-    color: "text-gray-600 bg-gray-50 border-gray-200",
-    dot: "bg-gray-400",
+    bg: "#F8FAFC",
+    text: "#64748B",
+    dot: "#94A3B8",
   },
   low: {
     label: "Low",
-    color: "text-slate-500 bg-slate-50 border-slate-200",
-    dot: "bg-slate-300",
+    bg: "#F8FAFC",
+    text: "#94A3B8",
+    dot: "#CBD5E1",
   },
 };
 
-// ─── Component ────────────────────────────────────────────────────────────────
+// ─── Component ────────────────────────────────────────────────────
 
 type ClientCardProps = {
   client: Client;
@@ -52,18 +60,27 @@ export default function ClientCard({
   onToggleFavorite,
 }: ClientCardProps) {
   const priority = client.priority ?? "normal";
-  const priorityCfg = PRIORITY_CONFIG[priority];
+  const pcfg = PRIORITY_CONFIG[priority];
 
-  // Derived CRM metrics from invoices
+  // CRM metrics
   const clientInvoices = invoices.filter((inv) => inv.clientId === client.id);
   const lifetimeRevenue = clientInvoices
     .filter((inv) => inv.status === "paid")
-    .reduce((sum, inv) => sum + calculateInvoice(inv.lineItems, inv.discountRate, inv.taxRate).total, 0);
+    .reduce(
+      (sum, inv) =>
+        sum + calculateInvoice(inv.lineItems, inv.discountRate, inv.taxRate).total,
+      0,
+    );
   const outstanding = clientInvoices
     .filter((inv) => ["sent", "overdue"].includes(inv.status))
-    .reduce((sum, inv) => sum + calculateInvoice(inv.lineItems, inv.discountRate, inv.taxRate).total, 0);
+    .reduce(
+      (sum, inv) =>
+        sum + calculateInvoice(inv.lineItems, inv.discountRate, inv.taxRate).total,
+      0,
+    );
   const hasOverdue = clientInvoices.some((inv) => inv.status === "overdue");
 
+  // Avatar initials
   const avatar = client.name
     .split(" ")
     .map((w) => w[0])
@@ -71,90 +88,138 @@ export default function ClientCard({
     .toUpperCase()
     .slice(0, 2);
 
-  // Format follow-up date
+  // Follow-up
   const followUpDate = client.next_follow_up_at
     ? new Date(client.next_follow_up_at)
     : null;
   const isFollowUpOverdue = followUpDate ? followUpDate < new Date() : false;
 
+  // Avatar background — gradient for VIP, solid color otherwise
+  const avatarStyle =
+    priority === "vip"
+      ? { background: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)", color: "white" }
+      : { background: "var(--ek-primary-50)", color: "var(--ek-primary)" };
+
   return (
     <div
-      className={`group relative flex flex-col rounded-xl border bg-white shadow-sm transition-all duration-200 hover:shadow-md ${
-        client.is_favorite ? "border-amber-200 ring-1 ring-amber-100" : "border-gray-200"
+      className={`ek-card ek-card-hover flex flex-col relative${
+        client.is_favorite ? " ring-2 ring-amber-200 ring-offset-0" : ""
       }`}
+      style={hasOverdue ? { borderColor: "#FECACA" } : undefined}
     >
-      {/* Header */}
+      {/* ── Header ─────────────────────────────── */}
       <div className="p-5">
         <div className="flex items-start justify-between gap-3">
           {/* Avatar + Name */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 min-w-0">
             <div
-              className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-base font-bold ${
-                priority === "vip"
-                  ? "bg-amber-100 text-amber-700"
-                  : "bg-indigo-100 text-indigo-700"
-              }`}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-sm font-bold"
+              style={avatarStyle}
             >
               {avatar}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-semibold text-gray-900 leading-tight">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <h3
+                  className="font-bold leading-tight truncate"
+                  style={{ fontSize: 15, color: "var(--ek-text-primary)" }}
+                >
                   {client.name}
                 </h3>
                 {hasOverdue && (
-                  <AlertCircle size={14} className="text-red-500 shrink-0" />
+                  <AlertCircle
+                    size={13}
+                    style={{ color: "var(--ek-danger)", flexShrink: 0 }}
+                  />
                 )}
               </div>
               {client.company && (
-                <p className="text-xs text-gray-500 mt-0.5">{client.company}</p>
+                <p
+                  className="truncate"
+                  style={{ fontSize: 12, color: "var(--ek-text-tertiary)", marginTop: 1 }}
+                >
+                  {client.company}
+                </p>
               )}
             </div>
           </div>
 
-          {/* Favorite + Priority */}
+          {/* Priority + Favorite + Menu */}
           <div className="flex items-center gap-1.5 shrink-0">
+            {/* Priority badge */}
             <span
-              className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${priorityCfg.color}`}
+              className="ek-badge"
+              style={{
+                background: pcfg.bg,
+                color: pcfg.text,
+                border: "1px solid",
+                borderColor: pcfg.dot + "40",
+                padding: "2px 10px",
+              }}
             >
-              <span className={`h-1.5 w-1.5 rounded-full ${priorityCfg.dot}`} />
-              {priorityCfg.label}
+              <span
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: pcfg.dot,
+                  display: "inline-block",
+                }}
+              />
+              {pcfg.label}
             </span>
 
+            {/* Favorite star */}
             {onToggleFavorite && client.id && (
               <button
                 onClick={() => onToggleFavorite(client.id!, !client.is_favorite)}
-                aria-label={client.is_favorite ? "Remove from favorites" : "Add to favorites"}
-                className="rounded-md p-1 text-gray-300 transition-colors hover:text-amber-500"
+                aria-label={
+                  client.is_favorite ? "Remove from favorites" : "Add to favorites"
+                }
+                className="ek-btn-icon"
+                style={{ padding: 4 }}
               >
                 <Star
-                  size={16}
-                  className={client.is_favorite ? "fill-amber-400 text-amber-400" : ""}
+                  size={15}
+                  style={
+                    client.is_favorite
+                      ? { fill: "#FBBF24", color: "#FBBF24" }
+                      : { color: "var(--ek-text-tertiary)" }
+                  }
                 />
               </button>
             )}
           </div>
         </div>
 
-        {/* Contact Info */}
+        {/* ── Contact info ── */}
         <div className="mt-4 space-y-1.5">
-          <div className="flex items-center gap-2 text-xs text-gray-600">
-            <Mail size={12} className="shrink-0 text-gray-400" />
+          <div
+            className="flex items-center gap-2"
+            style={{ fontSize: 12, color: "var(--ek-text-secondary)" }}
+          >
+            <Mail size={12} style={{ color: "var(--ek-text-tertiary)", flexShrink: 0 }} />
             <span className="truncate">{client.email}</span>
           </div>
 
           {client.phone && (
-            <div className="flex items-center gap-2 text-xs text-gray-600">
-              <Phone size={12} className="shrink-0 text-gray-400" />
+            <div
+              className="flex items-center gap-2"
+              style={{ fontSize: 12, color: "var(--ek-text-secondary)" }}
+            >
+              <Phone size={12} style={{ color: "var(--ek-text-tertiary)", flexShrink: 0 }} />
               <span>{client.phone}</span>
             </div>
           )}
 
           {client.last_contacted_at && (
-            <div className="flex items-center gap-2 text-xs text-gray-500">
-              <Clock size={12} className="shrink-0 text-gray-400" />
+            <div
+              className="flex items-center gap-2"
+              style={{ fontSize: 12, color: "var(--ek-text-tertiary)" }}
+            >
+              <Clock size={12} style={{ flexShrink: 0 }} />
               <span>
-                Last contacted:{" "}
+                Last contacted{" "}
                 {new Date(client.last_contacted_at).toLocaleDateString("en-IN", {
                   day: "numeric",
                   month: "short",
@@ -165,89 +230,116 @@ export default function ClientCard({
 
           {followUpDate && (
             <div
-              className={`flex items-center gap-2 text-xs ${
-                isFollowUpOverdue ? "text-red-600" : "text-gray-500"
-              }`}
+              className="flex items-center gap-2"
+              style={{
+                fontSize: 12,
+                color: isFollowUpOverdue ? "var(--ek-danger)" : "var(--ek-text-tertiary)",
+              }}
             >
-              <Calendar size={12} className="shrink-0" />
+              <Calendar size={12} style={{ flexShrink: 0 }} />
               <span>
-                Follow-up:{" "}
+                Follow-up{" "}
                 {followUpDate.toLocaleDateString("en-IN", {
                   day: "numeric",
                   month: "short",
                 })}
-                {isFollowUpOverdue && " (Overdue)"}
+                {isFollowUpOverdue && " · Overdue"}
               </span>
             </div>
           )}
         </div>
 
-        {/* Tags */}
+        {/* ── Tags ── */}
         {client.tags && client.tags.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1.5">
             {client.tags.slice(0, 4).map((tag) => (
-              <span
-                key={tag}
-                className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600"
-              >
+              <span key={tag} className="ek-chip" style={{ fontSize: 11, padding: "2px 8px" }}>
                 <Tag size={9} />
                 {tag}
               </span>
             ))}
             {client.tags.length > 4 && (
-              <span className="text-xs text-gray-400">+{client.tags.length - 4}</span>
+              <span style={{ fontSize: 11, color: "var(--ek-text-tertiary)" }}>
+                +{client.tags.length - 4}
+              </span>
             )}
           </div>
         )}
       </div>
 
-      {/* CRM Metrics */}
+      {/* ── CRM Metrics ────────────────────────── */}
       {(lifetimeRevenue > 0 || outstanding > 0) && (
-        <div className="border-t bg-gray-50/50 px-5 py-3">
-          <div className="flex gap-4">
-            {lifetimeRevenue > 0 && (
-              <div>
-                <p className="text-xs text-gray-500">Lifetime Revenue</p>
-                <p className="text-sm font-semibold text-emerald-600 flex items-center gap-1">
-                  <TrendingUp size={12} />
-                  {formatCurrency(lifetimeRevenue)}
-                </p>
-              </div>
-            )}
-            {outstanding > 0 && (
-              <div>
-                <p className="text-xs text-gray-500">Outstanding</p>
-                <p className={`text-sm font-semibold ${hasOverdue ? "text-red-500" : "text-amber-600"}`}>
-                  {formatCurrency(outstanding)}
-                </p>
-              </div>
-            )}
-          </div>
+        <div
+          className="flex gap-5 px-5 py-3"
+          style={{
+            borderTop: "1px solid var(--ek-border)",
+            background: "var(--ek-bg-base)",
+          }}
+        >
+          {lifetimeRevenue > 0 && (
+            <div>
+              <p style={{ fontSize: 11, color: "var(--ek-text-tertiary)" }}>Lifetime</p>
+              <p
+                className="flex items-center gap-1 font-bold"
+                style={{ fontSize: 13, color: "#16A34A" }}
+              >
+                <TrendingUp size={11} />
+                {formatCurrency(lifetimeRevenue)}
+              </p>
+            </div>
+          )}
+          {outstanding > 0 && (
+            <div>
+              <p style={{ fontSize: 11, color: "var(--ek-text-tertiary)" }}>Outstanding</p>
+              <p
+                className="font-bold"
+                style={{
+                  fontSize: 13,
+                  color: hasOverdue ? "var(--ek-danger)" : "var(--ek-warning)",
+                }}
+              >
+                {formatCurrency(outstanding)}
+              </p>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Actions */}
-      <div className="flex items-center justify-end gap-2 border-t bg-gray-50 px-4 py-3 mt-auto rounded-b-xl">
+      {/* ── Actions footer ──────────────────────── */}
+      <div
+        className="flex items-center gap-2 px-4 py-3 mt-auto"
+        style={{
+          borderTop: "1px solid var(--ek-border)",
+          background: "var(--ek-bg-subtle)",
+          borderRadius: "0 0 var(--ek-radius-card) var(--ek-radius-card)",
+        }}
+      >
         {onViewHistory && (
           <button
             onClick={() => onViewHistory(client)}
-            className="mr-auto rounded-lg px-3 py-1.5 text-xs font-medium text-indigo-600 hover:bg-indigo-50 transition-colors"
+            className="ek-btn ek-btn-ghost"
+            style={{ fontSize: 12, padding: "5px 10px", marginRight: "auto" }}
           >
+            <History size={13} />
             Timeline
           </button>
         )}
 
         <button
           onClick={() => client.id && onDelete(client.id)}
-          className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
+          className="ek-btn-icon"
+          aria-label="Delete client"
+          style={{ color: "var(--ek-danger)" }}
         >
-          Delete
+          <Trash2 size={14} />
         </button>
 
         <button
           onClick={() => onEdit(client)}
-          className="rounded-lg border px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 transition-colors"
+          className="ek-btn ek-btn-secondary"
+          style={{ fontSize: 12, padding: "5px 14px" }}
         >
+          <Pencil size={12} />
           Edit
         </button>
       </div>

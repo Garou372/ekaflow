@@ -46,9 +46,9 @@ export default function BillingPage() {
     return (
       <div className="space-y-6">
         <PageHeader title="Billing & Plans" description="Manage your subscription and usage." />
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-5 md:grid-cols-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-64 rounded-xl bg-gray-100 animate-pulse" />
+            <div key={i} className="ek-skeleton h-64 rounded-2xl" />
           ))}
         </div>
       </div>
@@ -72,10 +72,16 @@ export default function BillingPage() {
 
       {/* Trial Banner */}
       {isTrialing && (
-        <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
-          <AlertCircle size={20} className="text-amber-500 shrink-0" />
+        <div
+          className="flex items-center gap-3 px-5 py-4 rounded-2xl"
+          style={{
+            background: "#FFFBEB",
+            border: "1.5px solid #FDE68A",
+          }}
+        >
+          <AlertCircle size={20} style={{ color: "#D97706", flexShrink: 0 }} />
           <div>
-            <p className="font-semibold text-amber-800">
+            <p className="font-bold" style={{ color: "#92400E", fontSize: 14 }}>
               {daysLeftInTrial} day{daysLeftInTrial !== 1 ? "s" : ""} left in your free trial
             </p>
             <p className="text-sm text-amber-700">

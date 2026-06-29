@@ -2,72 +2,152 @@ import { useContext } from "react";
 import { CheckCircle, XCircle, AlertTriangle, Info, X } from "lucide-react";
 import { ToastContext, type Toast } from "../../hooks/useToast";
 
-// ─── Icon map ─────────────────────────────────────────────────────────────────
+// ─── Variant config ───────────────────────────────────────────────
 
-const ICONS = {
-  success: <CheckCircle size={18} className="shrink-0 text-emerald-500" />,
-  error: <XCircle size={18} className="shrink-0 text-red-500" />,
-  warning: <AlertTriangle size={18} className="shrink-0 text-amber-500" />,
-  info: <Info size={18} className="shrink-0 text-blue-500" />,
-};
+const VARIANTS = {
+  success: {
+    icon:    <CheckCircle size={18} strokeWidth={2} />,
+    accent:  "#22C55E",
+    bg:      "#F0FDF4",
+    border:  "#BBF7D0",
+  },
+  error: {
+    icon:    <XCircle size={18} strokeWidth={2} />,
+    accent:  "#EF4444",
+    bg:      "#FEF2F2",
+    border:  "#FECACA",
+  },
+  warning: {
+    icon:    <AlertTriangle size={18} strokeWidth={2} />,
+    accent:  "#F59E0B",
+    bg:      "#FFFBEB",
+    border:  "#FDE68A",
+  },
+  info: {
+    icon:    <Info size={18} strokeWidth={2} />,
+    accent:  "#5B5CEB",
+    bg:      "#EEEFFE",
+    border:  "#C4C5FC",
+  },
+} satisfies Record<Toast["variant"], { icon: React.ReactNode; accent: string; bg: string; border: string }>;
 
-const BORDER_COLORS = {
-  success: "border-l-emerald-500",
-  error: "border-l-red-500",
-  warning: "border-l-amber-500",
-  info: "border-l-blue-500",
-};
-
-// ─── Single Toast ─────────────────────────────────────────────────────────────
+// ─── Single Toast Item ────────────────────────────────────────────
 
 function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }) {
+  const v = VARIANTS[toast.variant];
+
   return (
     <div
       role="alert"
       aria-live="assertive"
-      className={`
-        flex w-full max-w-sm items-start gap-3 rounded-lg border border-l-4 bg-white px-4 py-3
-        shadow-lg ring-1 ring-black/5
-        animate-in slide-in-from-right-5 duration-300
-        ${BORDER_COLORS[toast.variant]}
-      `}
+      className="ek-toast"
+      style={{
+        display: "flex",
+        alignItems: "flex-start",
+        gap: 12,
+        width: "100%",
+        maxWidth: 360,
+        padding: "14px 16px",
+        borderRadius: 14,
+        background: v.bg,
+        border: `1.5px solid ${v.border}`,
+        boxShadow: "0 8px 32px rgba(16,24,40,0.12), 0 2px 8px rgba(16,24,40,0.06)",
+        position: "relative",
+        overflow: "hidden",
+      }}
     >
-      {ICONS[toast.variant]}
+      {/* Left accent bar */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          bottom: 0,
+          width: 4,
+          background: v.accent,
+          borderRadius: "14px 0 0 14px",
+        }}
+      />
 
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-gray-900">{toast.title}</p>
+      {/* Icon */}
+      <div style={{ color: v.accent, flexShrink: 0, marginTop: 1 }}>
+        {v.icon}
+      </div>
+
+      {/* Text */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <p
+          className="font-semibold leading-tight"
+          style={{ fontSize: 14, color: "#111827" }}
+        >
+          {toast.title}
+        </p>
         {toast.description && (
-          <p className="mt-0.5 text-sm text-gray-500 line-clamp-2">
+          <p
+            className="mt-1 leading-snug line-clamp-2"
+            style={{ fontSize: 13, color: "#64748B" }}
+          >
             {toast.description}
           </p>
         )}
       </div>
 
+      {/* Dismiss */}
       <button
         onClick={onDismiss}
         aria-label="Dismiss notification"
-        className="shrink-0 rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
+        className="shrink-0 rounded-lg transition-all duration-150"
+        style={{
+          padding: 4,
+          color: "#94A3B8",
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          marginTop: -2,
+        }}
+        onMouseEnter={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.background = "rgba(16,24,40,0.06)";
+          (e.currentTarget as HTMLButtonElement).style.color = "#475569";
+        }}
+        onMouseLeave={(e) => {
+          (e.currentTarget as HTMLButtonElement).style.background = "transparent";
+          (e.currentTarget as HTMLButtonElement).style.color = "#94A3B8";
+        }}
       >
-        <X size={14} />
+        <X size={15} strokeWidth={2.5} />
       </button>
     </div>
   );
 }
 
-// ─── Container ────────────────────────────────────────────────────────────────
+// ─── Container ────────────────────────────────────────────────────
 
 export default function ToastContainer() {
   const ctx = useContext(ToastContext);
   if (!ctx) return null;
 
   const { toasts, dismiss } = ctx;
-
   if (toasts.length === 0) return null;
 
   return (
     <div
       aria-label="Notifications"
-      className="fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 w-full max-w-sm"
+      style={{
+        position: "fixed",
+        bottom: 20,
+        right: 20,
+        zIndex: 9999,
+        display: "flex",
+        flexDirection: "column",
+        gap: 10,
+        width: "100%",
+        maxWidth: 360,
+        pointerEvents: "auto",
+      }}
     >
       {toasts.map((toast) => (
         <ToastItem

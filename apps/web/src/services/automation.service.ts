@@ -1,7 +1,6 @@
 import { supabase } from "../lib/supabase";
 import { createNotification } from "./notification.service";
 
-// Define the shape of rules and events
 export interface AutomationCondition {
   field: string;
   operator: "eq" | "neq" | "gt" | "lt";
@@ -34,7 +33,6 @@ export interface AutomationEngineProvider {
 export class DefaultAutomationEngine implements AutomationEngineProvider {
   async emit(event: AutomationEvent): Promise<void> {
     try {
-      // 1. Fetch active rules for this event
       const { data, error } = await supabase
         .from("automation_rules")
         .select("*")
@@ -42,67 +40,131 @@ export class DefaultAutomationEngine implements AutomationEngineProvider {
         .eq("is_active", true);
 
       if (error) throw error;
-      const rules = data as AutomationRule[];
 
-      // 2. Evaluate each rule
+      const rules = (data ?? []) as AutomationRule[];
+
       for (const rule of rules) {
         if (this.evaluateConditions(rule.conditions, event.payload)) {
-          await this.executeActions(rule.actions, event.payload);
+          await this.executeActions(rule.actions, event.payload, rule.id);
         }
       }
     } catch (err) {
-      console.error(`[AutomationEngine] Failed to process event ${event.eventName}:`, err);
+      console.error(
+        `[AutomationEngine] Failed to process event "${event.eventName}":`,
+        err,
+      );
     }
   }
 
-  private evaluateConditions(conditions: AutomationCondition[], payload: Record<string, any>): boolean {
+  private evaluateConditions(
+    conditions: AutomationCondition[],
+    payload: Record<string, any>,
+  ): boolean {
     for (const condition of conditions) {
-      const actualValue = payload[condition.field];
+      const actual = payload[condition.field];
       switch (condition.operator) {
         case "eq":
-          if (actualValue !== condition.value) return false;
+          if (actual !== condition.value) return false;
           break;
         case "neq":
-          if (actualValue === condition.value) return false;
+          if (actual === condition.value) return false;
           break;
         case "gt":
-          if (actualValue <= condition.value) return false;
+          if (actual <= condition.value) return false;
           break;
         case "lt":
-          if (actualValue >= condition.value) return false;
+          if (actual >= condition.value) return false;
           break;
         default:
           return false;
       }
     }
-    return true; // All conditions met (or no conditions)
+    return true;
   }
 
-  private async executeActions(actions: AutomationAction[], payload: Record<string, any>): Promise<void> {
+  private async executeActions(
+    actions: AutomationAction[],
+    payload: Record<string, any>,
+    ruleId: string,
+  ): Promise<void> {
     for (const action of actions) {
-      switch (action.type) {
-        case "notification":
-          await createNotification({
-            type: "system",
-            title: "Automation Triggered",
-            message: action.template || `Automated action for ${payload.id || 'system'}`,
-            link_url: null,
-          });
-          break;
-        case "enqueue_job":
-          // To be integrated in Milestone 2
-          console.log(`[AutomationEngine] Enqueueing job: ${action.job_name}`, payload);
-          break;
-        case "email":
-          // To be integrated with EmailProvider
-          console.log(`[AutomationEngine] Sending email...`, action, payload);
-          break;
-        default:
-          console.warn(`[AutomationEngine] Unknown action type: ${action.type}`);
+      try {
+        switch (action.type) {
+          case "notification": {
+            await createNotification({
+              type: action.notification_type ?? "system",
+              title: action.title ?? "Automation Triggered",
+              message:
+                action.message ??
+                `Automated action for ${payload.entity_id ?? "system"}`,
+              link_url: action.link_url ?? null,
+            });
+            break;
+          }
+
+          case "enqueue_job": {
+            // Write job to job_queue table for background processing
+            const { error } = await supabase.from("job_queue").insert([
+              {
+                job_name: action.job_name ?? "unknown_job",
+                payload: {
+                  ...payload,
+                  rule_id: ruleId,
+                  action_config: action,
+                },
+                status: "pending",
+              },
+            ]);
+
+            if (error) {
+              console.error(
+                `[AutomationEngine] Failed to enqueue job "${action.job_name}":`,
+                error,
+              );
+            }
+            break;
+          }
+
+          case "email": {
+            // Email delivery is deferred to a server-side provider (Resend).
+            // When the email integration is wired, replace this with an API call.
+            // For now we enqueue it as a job so no emails are silently dropped.
+            const { error } = await supabase.from("job_queue").insert([
+              {
+                job_name: "send_email",
+                payload: {
+                  to: action.to ?? payload.email ?? null,
+                  subject: action.subject ?? "",
+                  template: action.template ?? "",
+                  context: payload,
+                  rule_id: ruleId,
+                },
+                status: "pending",
+              },
+            ]);
+
+            if (error) {
+              console.error(
+                "[AutomationEngine] Failed to enqueue email job:",
+                error,
+              );
+            }
+            break;
+          }
+
+          default:
+            console.warn(
+              `[AutomationEngine] Unknown action type: ${action.type}`,
+            );
+        }
+      } catch (err) {
+        console.error(
+          `[AutomationEngine] Action "${action.type}" threw unexpectedly:`,
+          err,
+        );
       }
     }
   }
 }
 
-// Global instance to use throughout the application
 export const automationEngine = new DefaultAutomationEngine();

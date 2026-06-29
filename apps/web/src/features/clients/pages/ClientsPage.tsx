@@ -150,36 +150,38 @@ export default function ClientsPage() {
           {({ onClick }) => (
             <button
               onClick={onClick}
-              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+              className="ek-btn ek-btn-primary ek-btn-md"
             >
-              + New Client
+              <span style={{ fontSize: 16, lineHeight: 1 }}>+</span>
+              New Client
             </button>
           )}
         </UsageLimitGuard>
       </PageHeader>
 
       {isLoading ? (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="h-48 rounded-xl bg-gray-100 animate-pulse border" />
+            <div key={i} className="ek-skeleton h-52 rounded-2xl" />
           ))}
         </div>
       ) : (
         <>
           {/* CRM Summary Chips */}
       {clients.length > 0 && (
-        <div className="flex flex-wrap gap-2 text-xs">
-          <span className="rounded-full border bg-white px-3 py-1.5 text-gray-600">
-            <span className="font-semibold text-gray-900">{clients.length}</span> Total
+        <div className="flex flex-wrap gap-2">
+          <span className="ek-chip">
+            <span style={{ fontWeight: 700, color: "var(--ek-text-primary)" }}>{clients.length}</span>
+            Total
           </span>
           {vipCount > 0 && (
-            <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-amber-700">
-              <span className="font-semibold">{vipCount}</span> VIP
+            <span className="ek-chip" style={{ background: "#FFFBEB", color: "#D97706", borderColor: "#FDE68A" }}>
+              <span style={{ fontWeight: 700 }}>{vipCount}</span> VIP
             </span>
           )}
           {followUpDue > 0 && (
-            <span className="rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-red-600">
-              <span className="font-semibold">{followUpDue}</span> Follow-ups due
+            <span className="ek-chip ek-status-overdue">
+              <span style={{ fontWeight: 700 }}>{followUpDue}</span> Follow-ups due
             </span>
           )}
         </div>
@@ -187,20 +189,25 @@ export default function ClientsPage() {
 
       {/* Search + Filters */}
       <div className="flex flex-wrap gap-3">
-        <input
-          placeholder="Search by name, email, company, or tag..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="min-w-0 flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-        />
+        <div className="ek-search-wrap flex-1 min-w-[220px]">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input
+            type="search"
+            placeholder="Search by name, email, company or tag…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="ek-search-input"
+          />
+        </div>
 
         {/* Priority filter */}
         <div className="flex items-center gap-1.5">
-          <Filter size={15} className="text-gray-400" />
+          <Filter size={14} style={{ color: "var(--ek-text-tertiary)", flexShrink: 0 }} />
           <select
             value={priorityFilter}
             onChange={(e) => setPriorityFilter(e.target.value as PriorityFilter)}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none"
+            className="ek-select"
+            style={{ minWidth: 130 }}
           >
             <option value="all">All Priority</option>
             <option value="vip">VIP</option>
@@ -214,7 +221,8 @@ export default function ClientsPage() {
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as SortOption)}
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none"
+          className="ek-select"
+          style={{ minWidth: 140 }}
         >
           <option value="priority">Sort: Priority</option>
           <option value="name">Sort: Name</option>
@@ -225,13 +233,16 @@ export default function ClientsPage() {
         {/* Favorites toggle */}
         <button
           onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-          className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm transition-colors ${
-            showFavoritesOnly
-              ? "border-amber-300 bg-amber-50 text-amber-700"
-              : "border-gray-300 text-gray-600 hover:bg-gray-50"
-          }`}
+          className="ek-btn"
+          style={{
+            padding: "8px 14px",
+            background: showFavoritesOnly ? "#FFFBEB" : "var(--ek-bg-surface)",
+            border: showFavoritesOnly ? "1.5px solid #FDE68A" : "1.5px solid var(--ek-border)",
+            color: showFavoritesOnly ? "#D97706" : "var(--ek-text-secondary)",
+            borderRadius: "var(--ek-radius-md)",
+          }}
         >
-          <Star size={14} className={showFavoritesOnly ? "fill-amber-400 text-amber-400" : ""} />
+          <Star size={14} style={showFavoritesOnly ? { fill: "#FBBF24", color: "#FBBF24" } : undefined} />
           Favorites
         </button>
       </div>

@@ -1,6 +1,34 @@
-import { Folder, Clock, CheckCircle, PauseCircle } from "lucide-react";
+import { Folder, Clock, CheckCircle, PauseCircle, Pencil, Trash2, Receipt } from "lucide-react";
 import type { Project } from "../types/project";
 import { formatCurrency } from "../../invoices/utils/currency";
+
+// ─── Status config ────────────────────────────────────────────────
+
+const STATUS_CONFIG: Record<
+  Project["status"],
+  { label: string; icon: typeof Folder; bg: string; text: string }
+> = {
+  active: {
+    label: "Active",
+    icon: Folder,
+    bg: "var(--ek-primary-50)",
+    text: "var(--ek-primary)",
+  },
+  completed: {
+    label: "Completed",
+    icon: CheckCircle,
+    bg: "#F0FDF4",
+    text: "#16A34A",
+  },
+  on_hold: {
+    label: "On Hold",
+    icon: PauseCircle,
+    bg: "#FFFBEB",
+    text: "#D97706",
+  },
+};
+
+// ─── Types ────────────────────────────────────────────────────────
 
 type Props = {
   project: Project;
@@ -11,6 +39,8 @@ type Props = {
   onInvoiceTime?: (project: Project) => void;
 };
 
+// ─── Component ────────────────────────────────────────────────────
+
 export default function ProjectCard({
   project,
   clientName,
@@ -19,112 +49,157 @@ export default function ProjectCard({
   onDelete,
   onInvoiceTime,
 }: Props) {
-  const isCompleted = project.status === "completed";
-  const isOnHold = project.status === "on_hold";
+  const sc = STATUS_CONFIG[project.status] ?? STATUS_CONFIG.active;
+  const StatusIcon = sc.icon;
 
   return (
-    <div className="rounded-xl border bg-white shadow-sm transition hover:shadow-md flex flex-col">
+    <div className="ek-card ek-card-hover flex flex-col">
+      {/* ── Body ──────────────────────────────── */}
       <div className="p-5 flex-1">
-        <div className="flex justify-between items-start mb-4">
-          <div className="flex items-center gap-3">
+        {/* Header: icon + name + status badge */}
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <div className="flex items-center gap-3 min-w-0">
+            {/* Status icon */}
             <div
-              className={`flex h-10 w-10 items-center justify-center rounded-lg ${
-                isCompleted
-                  ? "bg-emerald-100 text-emerald-600"
-                  : isOnHold
-                    ? "bg-amber-100 text-amber-600"
-                    : "bg-indigo-100 text-indigo-600"
-              }`}
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+              style={{ background: sc.bg, color: sc.text }}
             >
-              {isCompleted ? (
-                <CheckCircle size={20} />
-              ) : isOnHold ? (
-                <PauseCircle size={20} />
-              ) : (
-                <Folder size={20} />
-              )}
+              <StatusIcon size={19} strokeWidth={2} />
             </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 leading-tight">
+
+            <div className="min-w-0">
+              <h3
+                className="font-bold leading-tight truncate"
+                style={{ fontSize: 15, color: "var(--ek-text-primary)" }}
+              >
                 {project.name}
               </h3>
-              <p className="text-sm text-gray-500">{clientName || "Unknown Client"}</p>
+              <p
+                className="truncate mt-0.5"
+                style={{ fontSize: 12, color: "var(--ek-text-tertiary)" }}
+              >
+                {clientName ?? "Unknown Client"}
+              </p>
             </div>
           </div>
+
+          {/* Status badge */}
           <span
-            className={`rounded-full px-2 py-1 text-xs font-medium capitalize ${
-              isCompleted
-                ? "bg-emerald-50 text-emerald-700"
-                : isOnHold
-                  ? "bg-amber-50 text-amber-700"
-                  : "bg-indigo-50 text-indigo-700"
-            }`}
+            className="ek-badge shrink-0"
+            style={{
+              background: sc.bg,
+              color: sc.text,
+              border: "1px solid",
+              borderColor: sc.text + "30",
+              fontSize: 11,
+              padding: "3px 10px",
+            }}
           >
-            {project.status.replace("_", " ")}
+            {sc.label}
           </span>
         </div>
 
+        {/* Description */}
         {project.description && (
-          <p className="text-sm text-gray-600 line-clamp-2 mb-4">
+          <p
+            className="truncate-2 mb-4"
+            style={{ fontSize: 13, color: "var(--ek-text-secondary)", lineHeight: 1.5 }}
+          >
             {project.description}
           </p>
         )}
 
-        <div className="grid grid-cols-2 gap-y-2 text-sm text-gray-500 mt-auto">
+        {/* Metrics grid */}
+        <div className="grid grid-cols-2 gap-y-3 gap-x-4">
           {project.budget !== null && (
-            <div className="flex flex-col">
-              <span className="text-xs text-gray-400 font-medium">Budget</span>
-              <span className="font-medium text-gray-900">
+            <div>
+              <p style={{ fontSize: 11, color: "var(--ek-text-tertiary)" }}>Budget</p>
+              <p
+                className="font-bold mt-0.5"
+                style={{ fontSize: 14, color: "var(--ek-text-primary)" }}
+              >
                 {formatCurrency(project.budget)}
-              </span>
+              </p>
             </div>
           )}
           {project.hourly_rate !== null && (
-            <div className="flex flex-col">
-              <span className="text-xs text-gray-400 font-medium">Rate</span>
-              <span className="font-medium text-gray-900">
+            <div>
+              <p style={{ fontSize: 11, color: "var(--ek-text-tertiary)" }}>Rate</p>
+              <p
+                className="font-bold mt-0.5"
+                style={{ fontSize: 14, color: "var(--ek-text-primary)" }}
+              >
                 {formatCurrency(project.hourly_rate)}/hr
-              </span>
+              </p>
             </div>
           )}
           {project.due_date && (
-            <div className="flex flex-col">
-              <span className="text-xs text-gray-400 font-medium">Due Date</span>
-              <span className="flex items-center gap-1 text-gray-700">
-                <Clock size={12} /> {new Date(project.due_date).toLocaleDateString()}
-              </span>
+            <div>
+              <p style={{ fontSize: 11, color: "var(--ek-text-tertiary)" }}>Due date</p>
+              <p
+                className="flex items-center gap-1 mt-0.5 font-medium"
+                style={{ fontSize: 13, color: "var(--ek-text-secondary)" }}
+              >
+                <Clock size={11} />
+                {new Date(project.due_date).toLocaleDateString("en-IN", {
+                  day: "numeric",
+                  month: "short",
+                })}
+              </p>
             </div>
           )}
           {unbilledMinutes > 0 && (
-            <div className="flex flex-col">
-              <span className="text-xs text-amber-500 font-medium">Unbilled Time</span>
-              <span className="font-medium text-amber-600">
+            <div>
+              <p style={{ fontSize: 11, color: "var(--ek-warning)" }}>Unbilled time</p>
+              <p
+                className="font-bold mt-0.5"
+                style={{ fontSize: 14, color: "var(--ek-warning)" }}
+              >
                 {Math.floor(unbilledMinutes / 60)}h {unbilledMinutes % 60}m
-              </span>
+              </p>
             </div>
           )}
         </div>
       </div>
 
-      <div className="flex justify-end gap-3 border-t bg-gray-50 p-4">
+      {/* ── Actions ───────────────────────────── */}
+      <div
+        className="flex items-center gap-2 px-4 py-3"
+        style={{
+          borderTop: "1px solid var(--ek-border)",
+          background: "var(--ek-bg-subtle)",
+          borderRadius: "0 0 var(--ek-radius-card) var(--ek-radius-card)",
+        }}
+      >
         {unbilledMinutes > 0 && onInvoiceTime && (
           <button
             onClick={() => onInvoiceTime(project)}
-            className="rounded-lg bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-700 hover:bg-indigo-100 transition-colors mr-auto"
+            className="ek-btn ek-btn-ghost"
+            style={{ fontSize: 12, padding: "5px 10px", marginRight: "auto" }}
           >
+            <Receipt size={13} />
             Invoice Time
           </button>
         )}
+
         <button
           onClick={() => onDelete(project.id)}
-          className={`rounded-lg px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors ${unbilledMinutes > 0 ? "" : "mr-auto"}`}
+          className="ek-btn-icon"
+          aria-label="Delete project"
+          style={{
+            color: "var(--ek-danger)",
+            marginLeft: unbilledMinutes === 0 ? "auto" : undefined,
+          }}
         >
-          Delete
+          <Trash2 size={15} />
         </button>
+
         <button
           onClick={() => onEdit(project)}
-          className="rounded-lg border bg-white px-4 py-2 text-sm font-medium hover:bg-gray-50 transition-colors"
+          className="ek-btn ek-btn-secondary"
+          style={{ fontSize: 12, padding: "5px 14px" }}
         >
+          <Pencil size={12} />
           Edit
         </button>
       </div>

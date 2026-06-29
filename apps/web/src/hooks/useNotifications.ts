@@ -4,41 +4,58 @@ import {
   createNotification,
   markAsRead,
   markAllAsRead,
+  deleteNotification,
 } from "../services/notification.service";
-import type { CreateNotificationPayload, Notification } from "../features/notifications/types/notification";
+import type {
+  CreateNotificationPayload,
+  Notification,
+} from "../features/notifications/types/notification";
 
+// ─── Query Keys ──────────────────────────────────────────────────────────────
+const KEYS = {
+  all: ["notifications"] as const,
+};
+
+// ─── Hook ────────────────────────────────────────────────────────────────────
 export default function useNotifications() {
   const queryClient = useQueryClient();
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["notifications"],
+    queryKey: KEYS.all,
     queryFn: async () => {
       const { data, error } = await getNotifications();
       if (error) throw error;
-      return (data as Notification[]) ?? [];
+      return data as Notification[];
     },
-    // Poll every 30 seconds for new notifications
-    refetchInterval: 30000,
+    refetchInterval: 30_000,
   });
 
   const createMutation = useMutation({
-    mutationFn: (payload: CreateNotificationPayload) => createNotification(payload),
+    mutationFn: (payload: CreateNotificationPayload) =>
+      createNotification(payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: KEYS.all });
     },
   });
 
   const markReadMutation = useMutation({
     mutationFn: (id: string) => markAsRead(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: KEYS.all });
     },
   });
 
   const markAllReadMutation = useMutation({
     mutationFn: () => markAllAsRead(),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: KEYS.all });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteNotification(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: KEYS.all });
     },
   });
 
@@ -50,5 +67,6 @@ export default function useNotifications() {
     createNotification: createMutation.mutateAsync,
     markAsRead: markReadMutation.mutateAsync,
     markAllAsRead: markAllReadMutation.mutateAsync,
+    deleteNotification: deleteMutation.mutateAsync,
   };
 }

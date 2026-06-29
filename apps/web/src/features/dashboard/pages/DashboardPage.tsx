@@ -70,14 +70,15 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <PageHeader title="Dashboard" description="Overview of your business" />
 
-      {/* KPI Cards */}
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+      {/* KPI Cards — 4 main metrics */}
+      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           title="Total Revenue"
           value={formatCurrency(metrics.totalRevenue, { minimumFractionDigits: 0 })}
           icon={<DollarSign size={20} />}
           trend={`${formatCurrency(metrics.totalExpenses, { minimumFractionDigits: 0 })} in expenses`}
           trendUp={true}
+          color="indigo"
         />
         <StatCard
           title="Net Profit"
@@ -85,6 +86,7 @@ export default function DashboardPage() {
           icon={<DollarSign size={20} />}
           trend={`${Math.round(metrics.winRate)}% win rate`}
           trendUp={metrics.netProfit > 0}
+          color="emerald"
         />
         <StatCard
           title="Outstanding"
@@ -92,6 +94,7 @@ export default function DashboardPage() {
           icon={<Clock size={20} />}
           trend={`${metrics.openProposals} open proposals`}
           trendUp={true}
+          color="amber"
         />
         <StatCard
           title="Overdue"
@@ -99,13 +102,19 @@ export default function DashboardPage() {
           icon={<AlertCircle size={20} />}
           trend={metrics.overdue > 0 ? "Action required" : "All good"}
           trendUp={metrics.overdue === 0}
+          color={metrics.overdue > 0 ? "red" : "emerald"}
         />
+      </div>
+
+      {/* 5th KPI — Active Clients, shown separately for clean layout */}
+      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           title="Active Clients"
           value={metrics.activeClients}
           icon={<Users size={20} />}
           trend={`${Math.round(metrics.proposalToInvoiceRate)}% conversion`}
           trendUp={metrics.proposalToInvoiceRate >= 50}
+          color="purple"
         />
       </div>
 
